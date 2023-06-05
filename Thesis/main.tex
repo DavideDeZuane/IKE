@@ -7,6 +7,26 @@ headinclude,footinclude, % Extra spacing for the header and footer
 BCOR5mm, % Binding correction
 ]{scrartcl}
 
+\usepackage{listings}
+\usepackage{dirtree}
+\usepackage{adjustbox}
+
+\lstset{
+    backgroundcolor=\color{white},
+    language=bash,
+    basicstyle=\ttfamily\small, % Imposta lo stile del testo
+    keywordstyle=[1]{\color{blue}}, % Imposta il colore delle parole chiave
+    morekeywords=[1]{pki}, 
+    deletekeywords=[1]{type},
+    keywordstyle=[2]{\color{green!40}}, % Imposta il colore delle parole chiave
+    morekeywords=[2]{\$}, 
+    stringstyle=\color{red}, % Imposta il colore delle stringhe
+    breaklines=true, % Esegue il wrapping delle linee se troppo lunghe
+    frame=single, % Inserisce una cornice intorno al codice
+    frameround=12,
+}
+
+
 \input{structure.tex} % Include the structure.tex file which specified the document structure and layout
 
 \hyphenation{Fortran hy-phen-ation} % Specify custom hyphenation points in words with dashes where you would like hyphenation to occur, or alternatively, don't put any dashes in a word to stop hyphenation altogether
@@ -103,16 +123,54 @@ quello che è anche l'architettura di strongswan charon.
 
 \section{Setup}
 
-Descrivere come si è deciso di effettuare il testing.
+Descrivere come si è deciso di effettuare il testing. Vediamo anche quelle che sono le convenzioni che abbiamo utilizzato nella nostra sperimentazione.
 
 \subsection{Environment}
 
 Confiugrazione delle macchine virtuali utilizzate con KVM. quantità di ram e cpu assegnata, sistema opeartivo su cui si è
 effettutato il testing e in particolare la rete in modalità network bridge.
 
+
 \subsection{Configuration} 
 
-Configurazione del deamon ovvero dei file di configu
+    \dirtree{%
+        .1 /etc.
+        .2 ipsec.conf.
+        .2 ipsec.secret.
+        .2 ipsec.d.
+        .3 cacerts.
+        .3 certs.
+        .3 private.
+    }
+    
+\subsubsection*{Certificati}
+
+IKEv2 supporta l'autenticazione tramite certificati, per poter avere dei certificati con delle firme valide occorre generare dei certificati da Root Autority.
+Per i test che andremo ad eseguire ci servono due certificati Root CA:
+\begin{itemize}
+    \item un certificato RSA
+    \item un certificato ECDSA
+\end{itemize}
+
+\noindent
+La caratteristica dei certificati Root CA è che sono autofirmati. Spiegare il perchè
+
+Dunque procediamo con il generare la chiave privata della Root CA:
+\begin{lstlisting}
+    $ pki --gen --type rsa --size 2048 --outform pem > 'ca.rsa.key.pem'
+    $ pki --gen --type ecdsa --size 256 --outform pem > 'ca.ecdsa.key.pem'
+\end{lstlisting} 
+
+Andiamo a creare i certificati di chiave pubblica andando ad applicare la chiave private appena generata:
+
+\begin{lstlisting}
+    $ pki --self --ca --lifetime 3650 --in 'ca.<type>.key.pem' --type <type> --dn "CN=Root CA" --outform pem > ca.<type>.cert.pem
+\end{lstlisting}
+
+Generazione dei certificati, non si possono utilizzare i certificati presenti nel repository perchè sono legati all'IP del responder e dell'initiator.
+\begin{lstlisting}
+    $ pki --gen --type ecdsa --size 256 --outform pem > '/etc/ipsec.d/private'
+\end{lstlisting} 
 
 \subsubsection{Mschap}
 
