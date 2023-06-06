@@ -95,6 +95,8 @@ BCOR5mm, % Binding correction
 
 \section{Introduction}
 
+L'aumento della connettività e n
+
 La sicurezza negli ultimi anni sta diventando sempre più importante per le comunicazioni, 
 
 c'è sempre più bisogno di realizzare collegamenti sicuri, uno strumento molto utile a questo fine sono le VPN.
@@ -103,6 +105,8 @@ c'è sempre più bisogno di realizzare collegamenti sicuri, uno strumento molto 
 
 \subsection{IPsec}
 
+IPsec (Internet Protocol Security) è una suite di protocolli che fornisce sicurezza alle comunicazioni Internet a livello IP. L'uso attuale più comune di IPsec è quello di fornire una rete privata virtuale (VPN).  IKE (Internet Key Exchange)
+   Internet Key Exchange) è il protocollo di negoziazione e gestione delle chiavi più comunemente munemente utilizzato per fornire chiavi negoziate e aggiornate dinamicamente per IPsec.
 Introduzione a quello che è ipsec e suo funzionamento
 
 \subsection{IKE}
@@ -126,6 +130,8 @@ quello che è anche l'architettura di strongswan charon.
 Descrivere come si è deciso di effettuare il testing. Vediamo anche quelle che sono le convenzioni che abbiamo utilizzato nella nostra sperimentazione.
 
 \subsection{Environment}
+
+https://www.baeldung.com/linux/qemu-from-terminal
 
 Confiugrazione delle macchine virtuali utilizzate con KVM. quantità di ram e cpu assegnata, sistema opeartivo su cui si è
 effettutato il testing e in particolare la rete in modalità network bridge.
@@ -186,7 +192,16 @@ Generazione dei certificati, non si possono utilizzare i certificati presenti ne
 
 \section{Testing}
 
-\subsection{Automating Test}
+Per misurare i cicli macchina abbiamo utlizzato perf 
+
+per installarlo apt-get intstall linux-perf se da problemi con workload failed è a causa dei permessi e per risolverlo basta sovrascrivere il contenuto di
+
+
+$/proc/sys/kernel/perf_event_paranoid$
+per fare il report di tutto l'ambiente utilizzare pef report
+\subsection{Time}
+
+\subsection{Performance}
 
 \subsection{Results}
 
