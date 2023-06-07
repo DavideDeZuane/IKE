@@ -10,6 +10,7 @@ BCOR5mm, % Binding correction
 \usepackage{listings}
 \usepackage{dirtree}
 \usepackage{adjustbox}
+\usepackage{hyperref}
 
 \lstset{
     backgroundcolor=\color{white},
@@ -25,7 +26,6 @@ BCOR5mm, % Binding correction
     frame=single, % Inserisce una cornice intorno al codice
     frameround=12,
 }
-
 
 \input{structure.tex} % Include the structure.tex file which specified the document structure and layout
 
@@ -125,58 +125,126 @@ quello che è anche l'architettura di strongswan charon.
 %	METHODS
 %----------------------------------------------------------------------------------------
 
+\newpage
+
 \section{Setup}
 
-Descrivere come si è deciso di effettuare il testing. Vediamo anche quelle che sono le convenzioni che abbiamo utilizzato nella nostra sperimentazione.
+Andiamo a vedere nel dettaglio l'ambiene e la configurazione che abbiamo utilizzato per realizzare i test. Per verificare le capacità di IKE abbiamo previsto:
+\begin{itemize}
+    \item $3$ modalità di autenticazione;
+    \item $2$ chiper suite differenti da utlizzare.
+\end{itemize}
+
+\noindent
+Nella fase di sperimentazione abbiamo utilizzato le seguenti convenzioni:
+\begin{itemize}
+    \item \textbf{Initiator}: l'host che invia la richiesta di stabilire una SA;
+    \item \textbf{Responder}: l'host che risponde alle richieste.
+\end{itemize}
+
 
 \subsection{Environment}
 
-https://www.baeldung.com/linux/qemu-from-terminal
+Per simulare i due host della comunicazione abbiamo creato due macchine virtuali tramite l'utilizzo di qemu/kvm, questo per avere 
+delle performance il più possibile simili a quelle reali. Le due macchine virtuali sono state create in modalità bridge, questo per evitare problemi con la modalità NAT. In questo modo
+le due macchine appartengono ala stessa rete e questo ci fa facilita la configurazione.
 
-Confiugrazione delle macchine virtuali utilizzate con KVM. quantità di ram e cpu assegnata, sistema opeartivo su cui si è
-effettutato il testing e in particolare la rete in modalità network bridge.
+\noindent
+Le macchine virtuali utilizzato hanno le seguenti specifiche:
+
+\begin{itemize}
+    \item \textit{Processore}: 2 core
+    \item \textit{Memoria}: 2048MB
+    \item \textit{OS}: Debian 11
+    \item \textit{Network}: Bridge
+\end{itemize}
+
+Setup delle macchine virtuali tramite qemu cli
+
+
+Dopo le macchine virtuali la lista dei vari requirements da installare
+
+
+Fare un file txt contenente tutti i pacchetti da installare in modo tale da lanciare un solo apt-get install
+
 
 
 \subsection{Configuration} 
 
+I file e le directory coinvolte nel processo di configurazione sono i seguenti. Dato che una delle principali modifiche di IKEv2 
+rispetto alla versione precedente è la possibilità di autenticazione tramite certificati andremo ad usare le directory specificate.
+\\
+
     \dirtree{%
         .1 /etc.
         .2 ipsec.conf.
-        .2 ipsec.secret.
+        .2 ipsec.secrets.
         .2 ipsec.d.
         .3 cacerts.
         .3 certs.
         .3 private.
     }
     
+\begin{itemize}
+    \item Il file \lstinline|ipsec.conf| specifica la maggior parte delle configurazioni e le informazioni di controllo per il sottosistema IPsec (ulteriori specifiche e sintassi sono disponibili al seguente \href{https://linux.die.net/man/5/ipsec.conf}{link}).
+    \item Il file \lstinline|ipsec.secrets| continene i segreti che poi verrranno utilizzati nella fase di autenticazione (ulteriori specifiche al seguenti \href{https://linux.die.net/man/5/ipsec.secrets}{link}).
+\end{itemize}
+
 \subsubsection*{Certificati}
 
-IKEv2 supporta l'autenticazione tramite certificati, per poter avere dei certificati con delle firme valide occorre generare dei certificati da Root Autority.
-Per i test che andremo ad eseguire ci servono due certificati Root CA:
+Una delle principali novità che introduce \lstinline|IKEv2| è la possibilità di eseguire l'autenticazione tra certificati X.509. In fase di testing abbiamo preso in considerazione due tipi di certificati:
+
 \begin{itemize}
-    \item un certificato RSA
-    \item un certificato ECDSA
+    \item Certificati RSA
+    \item Certificati ECDSA
 \end{itemize}
 
 \noindent
-La caratteristica dei certificati Root CA è che sono autofirmati. Spiegare il perchè
+A partire da una chiave pubblica è necessario realizzare un certificato di chiave pubblica e questo richiede la chiave privata di una CA. 
+Nel nostro caso ci siamo creati dei certificati da CA e li abbiamo ditribuiti manualmente tra i due host. \\
 
-Dunque procediamo con il generare la chiave privata della Root CA:
+\noindent
+Per la generazione abbiamo utilizzato il tool \lstinline|pki|
+
+\subsubsection*{CA Certificate}
+Partiamo con la generazione dei certificati da Certification Authority, di seguito sono riportati i due comandi da utilizzare. Ne occorrono due poichè per firmare
+i certificati ECDSA occorre una chiave con lo stesso schema.
 \begin{lstlisting}
     $ pki --gen --type rsa --size 2048 --outform pem > 'ca.rsa.key.pem'
     $ pki --gen --type ecdsa --size 256 --outform pem > 'ca.ecdsa.key.pem'
 \end{lstlisting} 
 
-Andiamo a creare i certificati di chiave pubblica andando ad applicare la chiave private appena generata:
-
+\noindent
+Ora utilizziamo la chiave privata per firmare il certificato di chiave pubblica.
 \begin{lstlisting}
-    $ pki --self --ca --lifetime 3650 --in 'ca.<type>.key.pem' --type <type> --dn "CN=Root CA" --outform pem > ca.<type>.cert.pem
+    $ pki --self --ca --lifetime 3650 --in 'ca.<type>.key.pem' --type <type> \
+     --dn "CN=CA" --outform pem > ca.<type>.cert.pem
 \end{lstlisting}
 
-Generazione dei certificati, non si possono utilizzare i certificati presenti nel repository perchè sono legati all'IP del responder e dell'initiator.
+\noindent
+Occorre poi distribuire questi due certificati ai due host, vanno messi all'intenro della directory \lstinline|cacerts|.
+
+\subsubsection*{Host Certificate}
+Passiamo ora a generare i certificati che gli host andranno ad utilizzare nella fase di autenticazione, occorre generare la coppia chiave privata, chiave pubblica.
 \begin{lstlisting}
-    $ pki --gen --type ecdsa --size 256 --outform pem > '/etc/ipsec.d/private'
+    $ pki --gen --type ecdsa --size 256 --outform pem > 'host.ecdsa.key'
+    $ pki --gen --type rsa --size 2048 --outform pem > 'host.rsa.key'
 \end{lstlisting} 
+
+\noindent
+E' buona norma salvare le chiavi all'interno della directory \lstinline|private|. Ora andiamo ad estrarre la chiave pubblica 
+da quella appena genrata e la firmiamo con la chiave delle CA del passo precedente.
+\begin{lstlisting}
+    $ pki --pub --in 'host.rsa.key' --type rsa | pki --issue --lifetime 1825 \
+        --cacert 'ca.rsa.cert.pem' --cakey 'ca.rsa.key.pem'                  \
+        --dn "CN=<Host_IP>" --san @<Host_IP> --san <Host_IP>                 \
+        -- flag serverAuth --outform pem > 'host.rsa.cert.pem'
+\end{lstlisting}
+
+\noindent
+Si procede in maniera analoga con le opportune modifiche anche per il certificato ECDSA. Questi vanno poi posiizonati all'intenro della
+directory \lstinline|certs|.
+
 
 \subsubsection{Mschap}
 
@@ -190,6 +258,7 @@ Generazione dei certificati, non si possono utilizzare i certificati presenti ne
 %	RESULTS AND DISCUSSION
 %----------------------------------------------------------------------------------------
 
+\newpage
 \section{Testing}
 
 Per misurare i cicli macchina abbiamo utlizzato perf 
@@ -206,6 +275,26 @@ per fare il report di tutto l'ambiente utilizzare pef report
 \subsection{Results}
 
 \section{Conslusioni}
+
+\newpage
+
+\appendix
+
+\section{Certificati}
+
+Spiegare quella che è una root CA
+
+Come funziona la catena di certificati
+
+Spiegare quelli che sono i campi all'interno di un certificato
+
+Cofronto tra certificato RSA e ECDSA
+
+Per verificare le informazioni contenute all'interno di un certificato utlilizzare il seguente comando:
+
+\begin{lstlisting}
+    openssl x509 --in <certificate>
+\end{lstlisting}
 %------------------------------------------------
 
 %----------------------------------------------------------------------------------------
