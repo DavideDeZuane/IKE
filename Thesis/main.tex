@@ -12,6 +12,7 @@ BCOR5mm, % Binding correction
 \usepackage{adjustbox}
 \usepackage{hyperref}
 
+
 \lstset{
     backgroundcolor=\color{white},
     language=bash,
@@ -101,7 +102,7 @@ La sicurezza negli ultimi anni sta diventando sempre più importante per le comu
 
 c'è sempre più bisogno di realizzare collegamenti sicuri, uno strumento molto utile a questo fine sono le VPN.
 
-
+Tutte le informazion su IKE sono contenute all'interno della RFC7296\cite{rfc7296}.
 
 \subsection{IPsec}
 
@@ -247,11 +248,55 @@ directory \lstinline|certs|.
 
 
 \subsubsection{Mschap}
+Il riassunto della configurazione è mostrato in tabella, per l'initiator e il responder sono riportate le modalità della loro autenticazione.
+\begin{center}
+    \setlength{\arrayrulewidth}{0.4mm}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|l|}
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Configuration}} \\
+        \hline
+        \textit{Initiator} & EAP-Mschapv2 \\
+        \textit{Responder} & RSA Certificate $2048$ \\
+        \textit{Chiper Suite} & $AES\_CBC\_128\_HMAC\_SHA2\_256\_128\_DH\_ECP\_256$ \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\noindent
+Esaminando gli scambi di IKE AUTH osserviamo che questa modalità richiede in totale $4$ exchange. 
 
 \subsubsection{RSA}
 
+\begin{center}
+    \setlength{\arrayrulewidth}{0.4mm}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|l|}
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Configuration}} \\
+        \hline
+        \textit{Initiator} & RSA Certificate $2048$ \\
+        \textit{Responder} & RSA Certificate $2048$ \\
+        \textit{Chiper Suite} & $AES\_CBC\_128\_HMAC\_SHA2\_256\_128\_DH\_ECP\_256$ \\
+        \hline
+    \end{tabular}
+\end{center}
+
 \subsubsection{ECDSA}
 
+\begin{center}
+    \setlength{\arrayrulewidth}{0.4mm}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|l|}
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Configuration}} \\
+        \hline
+        \textit{Initiator} & ECDSA Certificate 256\\
+        \textit{Responder} & ECDSA Certificate 256 \\
+        \textit{Chiper Suite} & $AES\_CBC\_128\_HMAC\_SHA2\_256\_128\_DH\_ECP\_256$ \\
+        \hline
+    \end{tabular}
+\end{center}
 %------------------------------------------------
 
 %----------------------------------------------------------------------------------------
@@ -304,7 +349,6 @@ Per verificare le informazioni contenute all'interno di un certificato utlilizza
 \renewcommand{\refname}{\spacedlowsmallcaps{References}} % For modifying the bibliography heading
 
 \bibliographystyle{unsrt}
-
 \bibliography{sample.bib} % The file containing the bibliography
 
 %----------------------------------------------------------------------------------------
