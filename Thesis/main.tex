@@ -18,7 +18,7 @@ BCOR5mm, % Binding correction
     language=bash,
     basicstyle=\ttfamily\small, % Imposta lo stile del testo
     keywordstyle=[1]{\color{blue}}, % Imposta il colore delle parole chiave
-    morekeywords=[1]{pki, ipsec, ip, xfrm, conn, EAP, RSA, ECDSA, openssl}, 
+    morekeywords=[1]{pki, ipsec, ip, xfrm, conn, EAP, RSA, ECDSA, openssl, qemu, kvm}, 
     deletekeywords=[1]{type,in},
     keywordstyle=[2]{\color{green!40}}, % Imposta il colore delle parole chiave
     morekeywords=[2]{\$,}, 
@@ -150,29 +150,43 @@ Nella fase di sperimentazione abbiamo utilizzato le seguenti convenzioni:
 \subsection{Environment}
 
 Per simulare i due host della comunicazione abbiamo creato due macchine virtuali tramite l'utilizzo di qemu/kvm, questo per avere 
-delle performance il più possibile simili a quelle reali. Le due macchine virtuali sono state create in modalità bridge, questo per evitare problemi con la modalità NAT. In questo modo
-le due macchine appartengono ala stessa rete e questo ci fa facilita la configurazione.
+delle performance il più possibile simili a quelle reali. Le due macchine virtuali sono state create in modalità bridge, questo per evitare problemi con la modalità NAT.
 
 \noindent
 Le macchine virtuali utilizzato hanno le seguenti specifiche:
 
 \begin{itemize}
-    \item \textit{Processore}: 2 core
-    \item \textit{Memoria}: 2048MB
+    \item \textit{Processore}: 2 core (flag \lstinline|-smp|)
+    \item \textit{Memoria}: 2048MB (flag \lstinline|-m|)
     \item \textit{OS}: Debian 11
     \item \textit{Network}: Bridge
 \end{itemize}
 
 \noindent
-Setup delle macchine virtuali tramite qemu cli. Dopo le macchine virtuali la lista dei vari requirements da installare
+Le macchine virtuali sono state create utilizzando \lstinline|qemu/kvm| tramite i seguenti comandi è possibile creare la macchina virtuale.
+\newline\newline\noindent
+Per prima cosa è necessario creare un disco immagine.
+\begin{lstlisting}
+$ qemu-img create -f qcow2 disk.img 10G 
+\end{lstlisting}
+\vspace*{0.2cm}
+Ora avviamo la macchina virtuale utilizzando il seguente comando.
+\begin{lstlisting}
+$ qemu-system-x86_64 -smp 2 -m 2G -hda disk.img -cdrom <debian_iso> \
+    -net bridge,br=virbr0 -enable-kvm & disown
+\end{lstlisting}
 
+\vspace*{0.5cm}
+\noindent
+Un procedimento simile si applica per l'altra macchina virtuale. Se non si vuole proseguire in questo modo 
+si può utilizzare l'interfaccia grafica fornita da \lstinline|virt-manager|.
 
 
 
 \subsection{Configuration} 
 
 I file e le directory coinvolte nel processo di configurazione sono i seguenti. Dato che una delle principali modifiche di IKEv2 
-rispetto alla versione precedente è la possibilità di autenticazione tramite certificati. I file e le directory interessate dalla configurazione sono le seguenti.
+rispetto alla versione precedente è la possibilità di autenticazione tramite certificati.
 \\
 
     \dirtree{%
@@ -217,9 +231,9 @@ $ pki --gen --type rsa --size 2048 --outform pem > 'ca.rsa.key.pem'
 $ pki --gen --type ecdsa --size 256 --outform pem > 'ca.ecdsa.key.pem'
 \end{lstlisting} 
 
+\vspace*{0.2cm}
 \noindent
 Ora utilizziamo la chiave privata per firmare il certificato di chiave pubblica.
-\vspace*{0.2cm}
 \begin{lstlisting}
 $ pki --self --ca --lifetime 3650 --in 'ca.<type>.key.pem' --type <type> \
      --dn "CN=CA" --outform pem > ca.<type>.cert.pem
@@ -236,10 +250,10 @@ $ pki --gen --type ecdsa --size 256 --outform pem > 'host.ecdsa.key'
 $ pki --gen --type rsa --size 2048 --outform pem > 'host.rsa.key'
 \end{lstlisting} 
 
+\vspace*{0.2cm}
 \noindent
 E' buona norma salvare le chiavi all'interno della directory \lstinline|private|. Ora andiamo ad estrarre la chiave pubblica 
 da quella appena genrata e la firmiamo con la chiave delle CA del passo precedente.
-\vspace*{0.2cm}
 \begin{lstlisting}
 $ pki --pub --in 'host.rsa.key' --type rsa | pki --issue --lifetime 1825 \
     --cacert 'ca.rsa.cert.pem' --cakey 'ca.rsa.key.pem'                  \
@@ -444,9 +458,6 @@ conn ecdsa
 \subsubsection*{\lstinline|ipsec.secrets|}
 
 \begin{lstlisting}
-########################################################
-# ipsec.secrets - strongSwan IPsec configuration file
-########################################################
 <identity> : EAP "<password>"
 
 : RSA "/etc/ipsec.d/private/<key>.pem"

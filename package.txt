@@ -1,3 +1,9 @@
+qemu
+qemu-kvm
+libvirt-daemon
+libvirt-clients
+bridge-utils
+
 strongswan
 strongswan-pki
 libcharon-extra-plugins
