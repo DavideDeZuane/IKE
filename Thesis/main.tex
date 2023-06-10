@@ -18,14 +18,17 @@ BCOR5mm, % Binding correction
     language=bash,
     basicstyle=\ttfamily\small, % Imposta lo stile del testo
     keywordstyle=[1]{\color{blue}}, % Imposta il colore delle parole chiave
-    morekeywords=[1]{pki}, 
-    deletekeywords=[1]{type},
+    morekeywords=[1]{pki, ipsec, ip, xfrm, conn, EAP, RSA, ECDSA, openssl}, 
+    deletekeywords=[1]{type,in},
     keywordstyle=[2]{\color{green!40}}, % Imposta il colore delle parole chiave
-    morekeywords=[2]{\$}, 
+    morekeywords=[2]{\$,}, 
+    keywordstyle=[3]{\color{red}}, % Imposta il colore delle parole chiave
+    morekeywords=[3]{leftsourceip, right, rightsubnet, auto, ike, leftauth, eap_identity, rightauth,leftcert,also,keyexchange,left,leftsubnet,forceencaps,compress,type,fragmentation,rekey,rightid,rightsourceip,rightdns,leftsendcert,src,dst,proto,auth,trunc, enc, anti,replay,window }, 
+    deletekeywords=[3]{ipsec-ike},
     stringstyle=\color{red}, % Imposta il colore delle stringhe
     breaklines=true, % Esegue il wrapping delle linee se troppo lunghe
     frame=single, % Inserisce una cornice intorno al codice
-    frameround=12,
+    framesep=7pt,
 }
 
 \input{structure.tex} % Include the structure.tex file which specified the document structure and layout
@@ -160,20 +163,16 @@ Le macchine virtuali utilizzato hanno le seguenti specifiche:
     \item \textit{Network}: Bridge
 \end{itemize}
 
-Setup delle macchine virtuali tramite qemu cli
+\noindent
+Setup delle macchine virtuali tramite qemu cli. Dopo le macchine virtuali la lista dei vari requirements da installare
 
-
-Dopo le macchine virtuali la lista dei vari requirements da installare
-
-
-Fare un file txt contenente tutti i pacchetti da installare in modo tale da lanciare un solo apt-get install
 
 
 
 \subsection{Configuration} 
 
 I file e le directory coinvolte nel processo di configurazione sono i seguenti. Dato che una delle principali modifiche di IKEv2 
-rispetto alla versione precedente è la possibilità di autenticazione tramite certificati andremo ad usare le directory specificate.
+rispetto alla versione precedente è la possibilità di autenticazione tramite certificati. I file e le directory interessate dalla configurazione sono le seguenti.
 \\
 
     \dirtree{%
@@ -187,9 +186,11 @@ rispetto alla versione precedente è la possibilità di autenticazione tramite c
     }
     
 \begin{itemize}
-    \item Il file \lstinline|ipsec.conf| specifica la maggior parte delle configurazioni e le informazioni di controllo per il sottosistema IPsec (ulteriori specifiche e sintassi sono disponibili al seguente \href{https://linux.die.net/man/5/ipsec.conf}{link}).
-    \item Il file \lstinline|ipsec.secrets| continene i segreti che poi verrranno utilizzati nella fase di autenticazione (ulteriori specifiche al seguenti \href{https://linux.die.net/man/5/ipsec.secrets}{link}).
+    \item Il file \lstinline|ipsec.conf|\footnotemark[1] specifica la maggior parte delle configurazioni e le informazioni di controllo per il sottosistema IPsec (ulteriori specifiche e sintassi sono disponibili al seguente \href{https://linux.die.net/man/5/ipsec.conf}{link}).
+    \item Il file \lstinline|ipsec.secrets|\footnotemark[1] continene i segreti che poi verrranno utilizzati nella fase di autenticazione (ulteriori specifiche al seguenti \href{https://linux.die.net/man/5/ipsec.secrets}{link}).
 \end{itemize}
+
+\footnotetext[1]{Le configurazioni utilizzate si trovano in \hyperlink{configuration}{appendice}. }
 
 \subsubsection*{Certificati}
 
@@ -210,15 +211,17 @@ Per la generazione abbiamo utilizzato il tool \lstinline|pki|
 \subsubsection*{CA Certificate}
 Partiamo con la generazione dei certificati da Certification Authority, di seguito sono riportati i due comandi da utilizzare. Ne occorrono due poichè per firmare
 i certificati ECDSA occorre una chiave con lo stesso schema.
+\vspace*{0.2cm}
 \begin{lstlisting}
-    $ pki --gen --type rsa --size 2048 --outform pem > 'ca.rsa.key.pem'
-    $ pki --gen --type ecdsa --size 256 --outform pem > 'ca.ecdsa.key.pem'
+$ pki --gen --type rsa --size 2048 --outform pem > 'ca.rsa.key.pem'
+$ pki --gen --type ecdsa --size 256 --outform pem > 'ca.ecdsa.key.pem'
 \end{lstlisting} 
 
 \noindent
 Ora utilizziamo la chiave privata per firmare il certificato di chiave pubblica.
+\vspace*{0.2cm}
 \begin{lstlisting}
-    $ pki --self --ca --lifetime 3650 --in 'ca.<type>.key.pem' --type <type> \
+$ pki --self --ca --lifetime 3650 --in 'ca.<type>.key.pem' --type <type> \
      --dn "CN=CA" --outform pem > ca.<type>.cert.pem
 \end{lstlisting}
 
@@ -227,19 +230,21 @@ Occorre poi distribuire questi due certificati ai due host, vanno messi all'inte
 
 \subsubsection*{Host Certificate}
 Passiamo ora a generare i certificati che gli host andranno ad utilizzare nella fase di autenticazione, occorre generare la coppia chiave privata, chiave pubblica.
+\vspace*{0.2cm}
 \begin{lstlisting}
-    $ pki --gen --type ecdsa --size 256 --outform pem > 'host.ecdsa.key'
-    $ pki --gen --type rsa --size 2048 --outform pem > 'host.rsa.key'
+$ pki --gen --type ecdsa --size 256 --outform pem > 'host.ecdsa.key'
+$ pki --gen --type rsa --size 2048 --outform pem > 'host.rsa.key'
 \end{lstlisting} 
 
 \noindent
 E' buona norma salvare le chiavi all'interno della directory \lstinline|private|. Ora andiamo ad estrarre la chiave pubblica 
 da quella appena genrata e la firmiamo con la chiave delle CA del passo precedente.
+\vspace*{0.2cm}
 \begin{lstlisting}
-    $ pki --pub --in 'host.rsa.key' --type rsa | pki --issue --lifetime 1825 \
-        --cacert 'ca.rsa.cert.pem' --cakey 'ca.rsa.key.pem'                  \
-        --dn "CN=<Host_IP>" --san @<Host_IP> --san <Host_IP>                 \
-        -- flag serverAuth --outform pem > 'host.rsa.cert.pem'
+$ pki --pub --in 'host.rsa.key' --type rsa | pki --issue --lifetime 1825 \
+    --cacert 'ca.rsa.cert.pem' --cakey 'ca.rsa.key.pem'                  \
+    --dn "CN=<Host_IP>" --san @<Host_IP> --san <Host_IP>                 \
+    -- flag serverAuth --outform pem > 'host.rsa.cert.pem'
 \end{lstlisting}
 
 \noindent
@@ -325,6 +330,174 @@ per fare il report di tutto l'ambiente utilizzare pef report
 
 \appendix
 
+\section{Configuration File}
+\hypertarget{configuration}{}
+Di seguito riportiamo i file di configurazione \lstinline|ipsec.conf| e \lstinline|ipsec.secrets| rispettivamente di 
+initiator e di responder. Una possibile modifica ai file potrebbe essere quella di rendere il tutto simmetrico, allo stato 
+attuale i due non possono scambiarsi di ruolo. Alcune note:
+
+\begin{itemize}
+    \item la connessione \textbf{default} definisce la configurazione comune a tutte le altre.
+    \item la connessione \textbf{secure} è quella con cui specifichiamo la chiper\_suite sicura.
+    \item \textbf{also} permette di realizzare l'erditarietà multipla tra le connessioni.
+    \item il parametro \textbf{auto} specifica quale operazione effettuare con la connessioni all'avvio di IPsec; il valore \textit{add} la aggiunge alle possibile conessioni ma non cerca di stabilirla
+\end{itemize}
+
+\subsection{Initiator}
+
+\subsubsection*{\lstinline|ipsec.conf|}
+\begin{lstlisting}
+########################################################
+# ipsec.conf - strongSwan IPsec configuration file
+########################################################
+conn %default
+    leftsourceip=%config
+    right=<ip_responder>
+    rightsubnet=0.0.0.0/0
+    auto=add
+
+conn secure
+    ike=aes256-sha384-ecp384!
+
+conn base-mschap
+    leftauth=eap-mschapv2
+    eap_identity="<identity>"
+    rightauth=pubkey
+
+conn base-rsa
+    rightauth=pubkey-rsa-2048
+    leftauth=pubkey-rsa-2048
+    leftcert=<path_to_cert>
+
+conn base-ecdsa
+    rightauth=pubkey-ecdsa-256
+    leftauth=pubkey-ecdsa-2048
+    leftcert=<path_to_cert>
+
+conn secure-rsa
+    also=base-rsa
+    also=secure
+
+conn secure-ecdsa
+    also=base-ecdsa
+    also=secure
+
+conn ipsec-ike
+    also=secure
+    also=base-mschap
+\end{lstlisting}
+\newpage
+
+\subsubsection*{\lstinline|ipsec.secrets|}
+\begin{lstlisting}
+########################################################
+# ipsec.secrets - strongSwan IPsec configuration file
+########################################################
+<identity> : EAP "<password>"
+
+: ECDSA "/etc/ipsec.d/private/<key>.pem"
+: RSA "/etc/ipsec.d/private/<key>.pem"
+
+\end{lstlisting}
+
+\subsection{Responder}
+
+\subsubsection*{\lstinline|ipsec.conf|}
+
+\begin{lstlisting}
+########################################################
+# ipsec.conf - strongSwan IPsec configuration file
+########################################################
+conn %default
+    keyexchange=ikev2
+    left=<ip_host>
+    leftsubnet=0.0.0.0/0
+    forceencaps=yes
+    compress=no
+    type=tunnel
+    fragmentation=yes
+    rekey=no
+    right=<ip_initiator>
+    rightid=%any
+    rightsourceip=0.0.0.0/0
+    rightdns=8.8.8.8,4.4.4.4
+    auto=add
+
+conn mschap
+    rightauth=eap-mschapv2
+    eap_identity=%identity
+    leftcert=<path_to_cert>
+    leftsendcert=always
+
+conn rsa
+    leftcert=<path_to_cert>
+    leftauth=pubkey-rsa-2048
+    rightauth=pubkey-rsa-2048
+    
+conn ecdsa
+    leftcert=<path_to_cert>
+    leftauth=ecdsa-256
+    rightauth=ecdsa-256
+    
+\end{lstlisting}
+
+\subsubsection*{\lstinline|ipsec.secrets|}
+
+\begin{lstlisting}
+########################################################
+# ipsec.secrets - strongSwan IPsec configuration file
+########################################################
+<identity> : EAP "<password>"
+
+: RSA "/etc/ipsec.d/private/<key>.pem"
+: ECDSA "/etc/ipsec.d/private/<key>.pem"
+
+
+\end{lstlisting}
+
+\section{Tools}
+
+Per instaurare la connessione IPsec si utilizza il seguente comando.
+\vspace*{0.2cm}
+\begin{lstlisting}
+$ ipsec up <conn_name>
+\end{lstlisting}
+Per verificare che la SA sia stata correttamente instaurata è possibile utilizzare il seguente tool \lstinline|ip xfrm|,
+il quale consente di effettuare la trasformazione dei pacchetti. Questo fornisce un interfaccia ai due database:
+\begin{itemize}
+    \item SAD: Security Association Database, tramite l'oggetto \lstinline|state|.
+    \item SPD: Security Policy Database, tramite l'oggetto \lstinline|policy|.
+\end{itemize}
+
+\noindent
+L'esecuzione del seguente comando fornisce una vista delle entry presenti nel SAD, possiamo poi utilizzare queste informazioni in wireahrk
+per poter vedere il traffico tra i due host in chiaro.
+\vspace*{0.2cm}
+\begin{lstlisting}
+$ ip xfrm state list
+src <initiator> dst <responder>
+    proto esp spi 0xc49d3a6d reqid 1 mode tunnel
+    replay-window 0 flag af-unspec
+    auth-trunc hmac(sha256) <skey> 128
+    enc cbc(aes) <skey>
+    anti-replay context: seq 0x0, oseq 0xc, bitmap 0x00000000
+src <responder> dst <initiator>
+    proto esp spi 0xca382e6d reqid 1 mode tunnel
+    replay-window 32 flag af-unspec
+    auth-trunc hmac(sha256) <skey> 128
+    enc cbc(aes) <skey>
+    anti-replay context: seq 0x0, oseq 0x0, bitmap 0x00000000
+\end{lstlisting}
+
+\subsection*{Wireshark}
+Per vedere il traffico sniffato in chiaro occorre configurare il protocollo ISAKMP all'interno di wireshark, andiamo a specificare quelle che sono
+le chiavi negoziate per l'autenticazione di messaggio e di cifratura.
+
+\begin{itemize}
+    \item Andare su \lstinline|Edit->Preferences->Protocols->ISAKMP|.
+    \item Aggiungere all'interno della tabella le varie entry riportate tramite \lstinline|ip xfrm|
+\end{itemize}
+
 \section{Certificati}
 
 Spiegare quella che è una root CA
@@ -338,7 +511,7 @@ Cofronto tra certificato RSA e ECDSA
 Per verificare le informazioni contenute all'interno di un certificato utlilizzare il seguente comando:
 
 \begin{lstlisting}
-    openssl x509 --in <certificate>
+ $ openssl x509 --in <certificate>
 \end{lstlisting}
 %------------------------------------------------
 
