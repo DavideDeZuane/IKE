@@ -25,6 +25,8 @@ BCOR5mm, % Binding correction
     keywordstyle=[3]{\color{red}}, % Imposta il colore delle parole chiave
     morekeywords=[3]{leftsourceip, right, rightsubnet, auto, ike, leftauth, eap_identity, rightauth,leftcert,also,keyexchange,left,leftsubnet,forceencaps,compress,type,fragmentation,rekey,rightid,rightsourceip,rightdns,leftsendcert,src,dst,proto,auth,trunc, enc, anti,replay,window }, 
     deletekeywords=[3]{ipsec-ike},
+    keywordstyle=[4]{\color{gray}}, % Imposta il colore delle parole chiave
+    morekeywords=[4]{Certificate, Data, Version, Serial Number, Signature, Algorithm, Issuer, Validity, Subject, Public, Key, Info, Modulus, Exponent, Signature, Not, Before, After, Serial, Number, RSA, pub, X509v3, extensions, NIST, CURVE, ASN1, OID, Authority, Identifier, Alternative, Name, Extended, Usage },
     stringstyle=\color{red}, % Imposta il colore delle stringhe
     breaklines=true, % Esegue il wrapping delle linee se troppo lunghe
     frame=single, % Inserisce una cornice intorno al codice
@@ -73,9 +75,9 @@ BCOR5mm, % Binding correction
 
 \tableofcontents % Print the table of contents
 
-\listoffigures % Print the list of figures
+%\listoffigures % Print the list of figures
 
-\listoftables % Print the list of tables
+%\listoftables % Print the list of tables
 
 %----------------------------------------------------------------------------------------
 %	ABSTRACT
@@ -99,31 +101,6 @@ BCOR5mm, % Binding correction
 
 \section{Introduction}
 
-L'aumento della connettività e n
-
-La sicurezza negli ultimi anni sta diventando sempre più importante per le comunicazioni, 
-
-c'è sempre più bisogno di realizzare collegamenti sicuri, uno strumento molto utile a questo fine sono le VPN.
-
-Tutte le informazion su IKE sono contenute all'interno della RFC7296\cite{rfc7296}.
-
-\subsection{IPsec}
-
-IPsec (Internet Protocol Security) è una suite di protocolli che fornisce sicurezza alle comunicazioni Internet a livello IP. L'uso attuale più comune di IPsec è quello di fornire una rete privata virtuale (VPN).  IKE (Internet Key Exchange)
-   Internet Key Exchange) è il protocollo di negoziazione e gestione delle chiavi più comunemente munemente utilizzato per fornire chiavi negoziate e aggiornate dinamicamente per IPsec.
-Introduzione a quello che è ipsec e suo funzionamento
-
-\subsection{IKE}
-
-
-Importanza di IKE per effettuare lo scambio di chiavi per stabilire la SA.
-
-Concetti su cui si basa IKE
-
-\subsection{Strongswan}
-
-Parlare rapidamente di quello che è
-quello che è anche l'architettura di strongswan charon.
 
 %----------------------------------------------------------------------------------------
 %	METHODS
@@ -300,6 +277,25 @@ Esaminando gli scambi di IKE AUTH osserviamo che questa modalità richiede in to
         \hline
     \end{tabular}
 \end{center}
+\vspace*{0.2cm}
+\noindent
+Utilizzando certificati RSA si osserva che la dimensione di un certificato eccede la dimensione massima di un pacchetto IP
+per tali motivi si ha la frammentazione: ovvero il contenuto, poichè eccede la dimenisone massima del campo \textit{data} viene
+spezzato in più paccetti.
+\newline  \\
+\noindent
+Anando ad esaminare il certificato, si osserva che ha una dimensione pari a $1032$ byte, di cui abbiamo:
+\begin{itemize}
+    \item $256$ byte per la rappresentazoine del modulo;
+    \item $1$ byte per la rappresentazione dell'esponente di cifratura
+    \item $384$ byte per la firma 
+    \item i restanti byte sono esaminati in  \hyperlink{certificati}{appendice}.
+\end{itemize} 
+
+\noindent
+Idealmente gli scambi durante IKE AUTH dovrebbero essere $2$ ovvero i due si scambiano reciprocamente i certificati. Tuttavia,
+data la dimensioni di quest'ultimi, gli scambi effettivi risultano essere in totale $4$. 
+
 
 \subsubsection{ECDSA}
 
@@ -316,7 +312,11 @@ Esaminando gli scambi di IKE AUTH osserviamo che questa modalità richiede in to
         \hline
     \end{tabular}
 \end{center}
-%------------------------------------------------
+\vspace*{0.2cm}
+\noindent
+Si osserva che i certificati ECDSA hanno una dimensione ridotta rispetto a quella dei certifcati RSA, infatti quello utilizzato nel
+nostro caso ha una dimensione pari a $619$ byte. Questo fa sì che non si ecceda la dimensione del payload del pacchetto IP, in questo
+modo la fase di IKE AUTH effettua solamente uno scambio.
 
 %----------------------------------------------------------------------------------------
 %	RESULTS AND DISCUSSION
@@ -509,27 +509,112 @@ le chiavi negoziate per l'autenticazione di messaggio e di cifratura.
     \item Aggiungere all'interno della tabella le varie entry riportate tramite \lstinline|ip xfrm|
 \end{itemize}
 
+\newpage
 \section{Certificati}
+\hypertarget{certificati}{}
+Andiamo a vedere a cosa è dovuta la dimensione dei certificati, per vedere il contenuto del certificato sotto forma di output testuale utilizzare il seguente comando.
+\begin{lstlisting}
+$ openssl x509 --in <cert> -text
+\end{lstlisting}
 
-Spiegare quella che è una root CA
+\vspace*{0.2cm}
+\noindent
+Andiamo a vedere nello specifico il conteuto delle due tipologie di certifiati utilizzate per la sperimentazione:
+\begin{itemize}
+    \item ECDSA
+    \item RSA
+\end{itemize}
+\vspace*{0.2cm}
+\noindent
+La differenza princiapali tra i due sta nella dimensione della chiave che nel nostro caso è di fondamentale importanza, in quanto evita la frammentazione del pacchetto.
+Anche se fa uso di chiavi da $256$ bit ECDSA garantisce un livello di sicurezza pari a $2^{256}$.
+\subsection{RSA Certificate}
+\begin{lstlisting}
+Certificate:
+Data:
+Version: 3 (0x2)
+Serial Number: 3952640834610742420 (0x36da99e5a7ad4494)
+Signature Algorithm: sha384WithRSAEncryption
+Issuer: CN = <info>
+Validity
+    Not Before: May 29 08:42:06 2023 GMT
+    Not After : May 27 08:42:06 2028 GMT
+Subject: CN = <info>
+Subject Public Key Info:
+    Public Key Algorithm: rsaEncryption
+        RSA Public-Key: (4096 bit)
+        Modulus:
+            00:c5:7d:50:95:2c:c3:42:32:b1:b8:1f:55:00:94:
+            ---
+        Exponent: 65537 (0x10001)
+X509v3 extensions:
+    X509v3 Authority Key Identifier: 
+        keyid:99:C3:D7:54:F4:40:EC:DE:9C:7C:60:DC:ED:29:60:BF:75:B6:94:30
 
-Come funziona la catena di certificati
+    X509v3 Subject Alternative Name: 
+        DNS:192.168.122.145, IP Address:192.168.122.145
+    X509v3 Extended Key Usage: 
+        TLS Web Server Authentication, 1.3.6.1.5.5.8.2.2
+Signature Algorithm: sha384WithRSAEncryption
+ 18:e9:7c:2b:ea:2f:2c:2b:a6:d4:bd:6c:94:63:41:29:f9:45:
+ ---
+\end{lstlisting}
+\vspace*{0.2cm}
+\noindent
+Come possiamo osservare dall'output sono conenute numerose informazioni che dunque aumentano notevolmente 
+la dimensione del certificato e quindi che portano alla frammentazione di quest'ultimo durante la fase di IKE AUTH.
 
-Spiegare quelli che sono i campi all'interno di un certificato
-
-Cofronto tra certificato RSA e ECDSA
-
-Per verificare le informazioni contenute all'interno di un certificato utlilizzare il seguente comando:
+\newpage
+\subsection{ECDSA}
 
 \begin{lstlisting}
- $ openssl x509 --in <certificate>
+Certificate:
+Data:
+    Version: 3 (0x2)
+    Serial Number: 6875679331162392113 (0x5f6b51ec3b6e0631)
+    Signature Algorithm: ecdsa-with-SHA256
+    Issuer: CN = CA ECDSA
+    Validity
+        Not Before: May 29 14:17:10 2023 GMT
+        Not After : May 27 14:17:10 2028 GMT
+    Subject: CN = 192.168.122.171 ECDSA
+    Subject Public Key Info:
+        Public Key Algorithm: id-ecPublicKey
+            Public-Key: (256 bit)
+            pub:
+                04:21:d7:c7:a0:6f:fd:13:1a:1e:f4:c6:5b:5c:88:
+                5c:99:3e:bf:92:89:7c:b2:0d:44:d0:9a:c7:aa:c3:
+                0b:fe:4a:75:3a:ca:7b:91:ee:1b:69:e7:4f:40:06:
+                e1:27:ee:62:72:eb:f7:06:30:c6:47:ae:db:01:e4:
+                36:62:12:3e:92
+            ASN1 OID: prime256v1
+            NIST CURVE: P-256
+    X509v3 extensions:
+        X509v3 Authority Key Identifier: 
+            keyid:1A:12:82:AD:18:CF:85:0A:24:03:32:DC:D7:10:26:92:15:14:00:F9
+
+        X509v3 Subject Alternative Name: 
+            DNS:192.168.122.171, IP Address:192.168.122.171
+        X509v3 Extended Key Usage: 
+            TLS Web Server Authentication
+Signature Algorithm: ecdsa-with-SHA256
+     30:44:02:20:62:aa:81:67:fe:b7:2e:2f:13:f9:69:d4:6c:72:
+     7e:a9:62:6a:db:7a:1b:af:35:b7:42:dc:42:fc:11:95:fa:d7:
+     02:20:33:6f:7f:6b:a8:c4:c1:33:0e:04:7b:2f:99:14:85:ff:
+     93:78:9c:ed:5d:84:58:61:76:d8:4d:b7:24:07:bd:b2
+
 \end{lstlisting}
 %------------------------------------------------
+
+
+
+%------------------------------------------------
+
 
 %----------------------------------------------------------------------------------------
 %	BIBLIOGRAPHY
 %----------------------------------------------------------------------------------------
-
+\newpage
 \renewcommand{\refname}{\spacedlowsmallcaps{References}} % For modifying the bibliography heading
 
 \bibliographystyle{unsrt}
