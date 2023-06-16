@@ -323,22 +323,64 @@ modo la fase di IKE AUTH effettua solamente uno scambio.
 %----------------------------------------------------------------------------------------
 
 \newpage
+
+
 \section{Testing}
 
-Per misurare i cicli macchina abbiamo utlizzato perf 
+\subsection{Panoramica}
 
-per installarlo apt-get intstall linux-perf se da problemi con workload failed è a causa dei permessi e per risolverlo basta sovrascrivere il contenuto di
+Il nostro lavoro si concentra sullo stimare le risorse necessarie per l'installazione di Security Associations. In ogni sottosezione analizzeremo uno degli aspetti critici, e descriveremo come abbiamo effettuate le misurazioni ed i risultati ottenuti.
+Vedi \hyperlink{}{appendice} per la configurazione strumenti di misura.
+
+\subsection{Analisi traffico}
+
+\subsubsection{Misurazioni}
+
+Per effettuare l'analisi del traffico necessario per l'instaurazione di una SA tra i due nodi abbiao realizzato uno shell script (vedi Appendice).
+Il tool principale per la realizzazione di quest'ultimo e' tcpdump, un programma per il monitoraggio delle interfaccie e la cattura dei pacchetti in entrata ed in un uscita da un calcolatore. La scelta e' dovuta alla precisione in termini di timestamp fornita, e alla sua diffusione (e' gia presente di default in molte distro linux).
+Lo script iterativamente instaura ed elimina una security association, e ne cattura il traffico, tramite il quale possiamo misurare i tempi necessari per le diverse fasi del protcollo, e le dimensioni dei pacchetti.
+Il tool permette di specificare la suite crittografica che si vuole prendere in esame, ed il numero di tentativi da effettuare.
+Al termine delle iterazioni lo script fornisce delle medie dei valori che si vogliono misurare.
+
+\subsubsection{Risultati}
+
+Come specificato nella fase di configurazione si nota che il numero di scambi dipende fortemente dalla suite crittografica considerata.
+In particolare, il metodo di autenticazione e' la componente che incide maggiormente. Ad esempio l'autenticazione tramite MSCHAPv2 prevede 4 scambi, mentre l'utilizzo di certificati prevede 2 scambi. Tuttavia e' importante osservare che qualora il certificato ecceda la dimensione massima per il payload dei pacchetti ip, si ha frammentazione. Questo fenomeno si puo' osservare ad esempio con l'utilizzo di certificati generati con RSA 2048.
+
+In figura a e b troviamo i risultati ottenuti utilizzando certificati generati rispettivamente con RSA 2048 e con ECDSA 256, data la seguente suite crittografica:
+
+- AES 128 CBC
+- HMAC 256
+- AES 128 XCBC
+- ECP 256
 
 
-$/proc/sys/kernel/perf_event_paranoid$
-per fare il report di tutto l'ambiente utilizzare pef report
-\subsection{Time}
+\subsection{Utilizzo risorse CPU}
 
-\subsection{Performance}
+\subsubsection{Misurazioni}
 
-\subsection{Results}
+Per misurare le risorse richieste dalla CPU per instaurare una SA utilizzando Strongswan, abbiamo utilizzato il tool perf.
+Questo permette di effettuare CPU profiling, esaminando diversi parametri della CPU per l'esecuzione di un certo comando.
+In questo caso ci siamo soffermati sul numero di cicli di clock ed istruzioni per SA instaurata.
+Perf permette di eseguire il comando un certo numero di volte, fornendoci media e varianza dei valori.
 
-\section{Conslusioni}
+
+\subsubsection{Risultati}
+
+In figura possiamo vedere i dati ottenuti con perf. 
+
+\subsection{Occupazione di memoria}
+
+\subsubsection{Misurazioni}
+
+Per misurare la quantita' di RAM necessaria per Strongswan abbiamo utilizzato il tool pmap, che permette di avere informazioni sulla memoria allocata per un determinato processo.
+
+\subsubsection{Risultati}
+
+In seguito a diverse misurazioni possiamo constatare che l'utilizzo di memoria per il demone charon si attesta tipicamente a 10 MB, piu in generale nell'ordine delle decine di MB, mentre per ogni SA instaurata si ha un aumento in memoria di circa 15 KB, piu in generale nell'ordine delle decine di KiloByte. 
+
+
+\section{Conclusioni}
 
 \newpage
 
@@ -509,7 +551,36 @@ le chiavi negoziate per l'autenticazione di messaggio e di cifratura.
     \item Aggiungere all'interno della tabella le varie entry riportate tramite \lstinline|ip xfrm|
 \end{itemize}
 
+\subsection{Shell script}
+
+Di seguito e' riportato lo shell script per l'analisi del traffico dei pacchetti.
+\begin{lstlisting}
+\end{lstlisting}
+
+Per eseguire lo script occorre renderlo eseguibile col seguente comando:
+\begin{lstlisting}
+chmod +x ikev2-tester.sh
+\end{lstlisting}
+
+I flag da specificare al momento dell'esecuzione dello script sono i seguenti:
+- -i: per specificare l'interfaccia su cui catturare i pacchetti con tcpdump
+- -s: per specificare la suite crittografica
+- -n: per specificare il numero di tentativi da effettuare
+
+Utilizzando la configurazione speficata in \hyperlink{}{}, le suite crittografiche disponibili sono le seguenti:
+
+\subsection{perf}
+
+Per installare perf apt-get intstall linux-perf se da problemi con workload failed è a causa dei permessi e per risolverlo basta sovrascrivere il contenuto di
+
+$/proc/sys/kernel/perf_event_paranoid$
+
+per fare il report di tutto l'ambiente utilizzare pef report
+
+\subsection{pmap}
+
 \newpage
+
 \section{Certificati}
 \hypertarget{certificati}{}
 Andiamo a vedere a cosa è dovuta la dimensione dei certificati, per vedere il contenuto del certificato sotto forma di output testuale utilizzare il seguente comando.
