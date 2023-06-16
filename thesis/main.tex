@@ -555,6 +555,175 @@ le chiavi negoziate per l'autenticazione di messaggio e di cifratura.
 
 Di seguito e' riportato lo shell script per l'analisi del traffico dei pacchetti.
 \begin{lstlisting}
+#!/usr/bin/env bash
+
+while getopts ":n:s:i:" option; do
+    case $option in
+        n)
+      	    attempts="$OPTARG"
+      		;;
+        s)
+            suite="$OPTARG"
+            if [ $suite == 1 ];
+			then
+                conn="base-mschap"
+                enc_alg="AES 128 CBC"
+                auth_alg="HMAC 256"
+                prf_alg="AES 128 XCBC"
+                dh_alg="ECP 256"
+                auth_method="EAP MSCHAPv2"
+            elif [ $suite == 2 ]
+            then
+                conn="base-rsa"
+                enc_alg="AES 128 CBC"
+                auth_alg="HMAC 256"
+                prf_alg="AES 128 XCBC"
+                dh_alg="ECP 256"
+                auth_method="X.509 RSA 2048 Certificate"
+            elif [ $suite == 3 ]
+            then
+                conn="base-ecdsa"
+                enc_alg="AES 128 CBC"
+                auth_alg="HMAC 256"
+                prf_alg="AES 128 XCBC"
+                dh_alg="ECP 256"
+                auth_method="X.509 ECDSA 256 Certificate"
+            else
+                $(echo "Suite must be 1 or 2 ...")
+                exit 1
+            fi
+            ;;
+        i)
+            interface="$OPTARG"
+            $(sudo timeout --preserve-status 0.5 tcpdump -ni $interface > /dev/null 2>&1 || $(echo "Supplied interface doesn't exist!" && exit))
+            ;;
+        *)
+            echo "Usage: $0 [-n number_of_attempts] [-s suite] [-i interface]"
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z $suite ] || [ -z $suite ] || [ -z $interface ]
+then
+    echo "Set all flags!"
+    echo "Usage: $0 [-n number_of_attempts] [-s suite] [-i interface]"
+    exit 1
+fi
+
+echo ""
+echo "###############################################"
+echo ""
+echo "Number of attempts: $attempts"
+echo ""
+echo "###############################################"
+echo ""
+echo "Chosen suite: $suite"
+echo " - Encryption algorithm: $enc_alg"
+echo " - Authentication algorithm: $auth_alg"
+echo " - Pseudo Random Function algorithm: $prf_alg"
+echo " - Diffie-Hellman Group: $dh_alg"
+echo " - Authentication Method: $auth_method"
+echo ""
+echo "###############################################"
+echo ""
+
+cumulative_time=0
+cumulative_packets=0
+cumulative_size=0
+cumulative_init_size=0
+cumulative_auth_size=0
+sudo ipsec down $conn > /dev/null
+sleep 3
+
+for (( att=1; att<=$attempts; att++ ))
+do
+    echo "Starting attempt $att"
+    echo "Waiting to be sure connection is closed!"
+    sleep 4
+    echo "Wait is over!"
+    echo "Dumping on port 500" && sudo timeout --preserve-status 5 tcpdump --immediate-mode -ni $interface -tt -l -w inittmpbuffer1 -Z root port 500 >/dev/null 2>&1 && echo "Dump on 500 over" &
+    echo "Dumping on port 4500" && sudo timeout --preserve-status 5 tcpdump --immediate-mode -ni $interface -tt -l -w authtmpbuffer1 -Z root port 4500 >/dev/null && echo "Dump on 4500 over" && sleep 1 && echo "Closing SA!" && sudo ipsec down $conn > /dev/null &
+    sleep 2 && echo "Establishing SA!" && sudo ipsec up $conn > /dev/null
+    echo "Waiting now!"
+    sleep 10
+    echo "Waiting is over!"
+    sudo tcpdump -tt -Z root -n -vvv -e -r inittmpbuffer1 > inittmpbuffer2 2>&1
+    sudo tcpdump -tt -Z root -n -vvv -e -r authtmpbuffer1 > authtmpbuffer2 2>&1
+    grep -B 1 "isakmp" authtmpbuffer2 > authtmpbuffer3
+    grep -B 1 "isakmp" inittmpbuffer2 > inittmpbuffer3
+    init_packets=$(grep -Eo "^[0-9]+" inittmpbuffer2 | wc -l | grep -Eo "^[0-9]+")
+    auth_packets=$(grep -Eo "^[0-9]+" authtmpbuffer3 | wc -l | grep -Eo "^[0-9]+")
+    init_start_time=$(grep -Eo "^[0-9]+.[0-9]+" inittmpbuffer3 | head -n 1)
+    init_end_time=$(grep -Eo "^[0-9]+.[0-9]+" inittmpbuffer3 | tail -n 1)
+    auth_start_time=$(grep -Eo "^[0-9]+.[0-9]+" authtmpbuffer3 | head -n 1)
+    auth_end_time=$(grep -Eo "^[0-9]+.[0-9]+" authtmpbuffer3 | tail -n 1)
+    init_time=$(echo "scale=6; $init_end_time - $init_start_time" | bc)
+    auth_time=$(echo "scale=6; $auth_end_time - $auth_start_time" | bc)
+    attempt_time=$(echo "scale=6; $auth_end_time - $init_start_time" | bc)
+    attempt_packets=$(( init_packets + auth_packets ))
+    cumulative_packets=$(( cumulative_packets + attempt_packets ))
+    cumulative_time=$(echo "scale=6; $cumulative_time + $attempt_time" | bc)
+    init_size=$(grep -Eo "length [0-9]+:" inittmpbuffer3 | grep -Eo "[0-9]+" | awk '{ SUM += $1} END { print SUM }')
+    auth_size=$(grep -Eo "length [0-9]+:" authtmpbuffer3 | grep -Eo "[0-9]+" | awk '{ SUM += $1} END { print SUM }')
+    attempt_size=$(( init_size + auth_size ))
+    cumulative_size=$(( cumulative_size + attempt_size ))
+    cumulative_init_size=$(( cumulative_init_size + init_size ))
+    cumulative_auth_size=$(( cumulative_auth_size + auth_size ))
+    echo " -------------------------------------------"
+    echo "| Init time       | 0$init_time  "
+    echo " -------------------------------------------"
+    echo "| Init packets    | $init_packets     "
+    echo " -------------------------------------------"
+    echo "| Exchanged bytes | $init_size   "
+    echo " -------------------------------------------"
+    echo "| Auth time       | 0$auth_time "
+    echo " -------------------------------------------"
+    echo "| Auth_packets    | $auth_packets         "
+    echo " -------------------------------------------"
+    echo "| Exchanged bytes | $auth_size  "
+    echo " -------------------------------------------"
+    echo "| Total time      | 0$attempt_time  "
+    echo " -------------------------------------------"
+    echo "| Total packets   | $attempt_packets "
+    echo " -------------------------------------------"
+    echo "| Total bytes     | $attempt_size   "
+    echo " -------------------------------------------"
+    echo ""
+    echo "###############################################"
+    echo ""
+    sudo rm inittmpbuffer1 inittmpbuffer2 inittmpbuffer3 authtmpbuffer1 authtmpbuffer2 authtmpbuffer3
+done
+
+average_time=$(echo "scale=6; $cumulative_time / $attempts" | bc)
+average_init_size=$(( cumulative_init_size / attempts ))
+average_auth_size=$(( cumulative_auth_size / attempts ))
+average_size=$(( cumulative_size / attempts ))
+average_packets=$(( cumulative_packets / attempts ))
+
+
+echo "All attempts executed!"
+echo " -------------------------------------------"
+echo "| Average time per attempt | 0$average_time "
+echo " -------------------------------------------"
+echo "| Total attempts time      | 0$cumulative_time "
+echo " -------------------------------------------"
+echo "| Average packets          | $average_packets "
+echo " -------------------------------------------"
+echo "| Average init bytes       | $average_init_size "
+echo " -------------------------------------------"
+echo "| Average auth bytes       | $average_auth_size "
+echo " -------------------------------------------"
+echo "| Average exchanged bytes  | $average_size "
+echo " -------------------------------------------"
+echo "| Total exchanged bytes    | $cumulative_size"
+echo " -------------------------------------------"
+echo ""
+echo "Goodbye!"
+echo ""
+echo "###############################################"
+echo "
+
 \end{lstlisting}
 
 Per eseguire lo script occorre renderlo eseguibile col seguente comando:
