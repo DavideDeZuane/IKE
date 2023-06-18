@@ -76,8 +76,8 @@ BCOR5mm, % Binding correction
 \newpage
 \section{Introduction}
 Lo scopo di questa tesina è stimare le risorse necessarie per l'utilizzo di IPsec, una suite di protocolli al livello network per realizzare comunicazioni sicure.
-IPsec si basa sull'instaurazione di Security Associatons (SA), definite dal protocollo ISAKMP, le quali definiscono uno stato condiviso tra i due host della comunicaizone per utilizzare
-primitive crittografiche. La parte critica di questo processo è lo scambio di chiavi, il quale avviene attraverso il protocollo IKE (Internet Key Exchange definito nell'RFC\cite{rfc7296}).
+IPsec si basa sull'instaurazione di Security Associatons (SA), definite dal protocollo ISAKMP (Internet Security Association Key Management Protocol), le quali definiscono uno stato condiviso tra i due host della comunicaizone per utilizzare
+primitive crittografiche. La parte critica di questo processo è lo scambio di chiavi, il quale avviene attraverso il protocollo IKE (Internet Key Exchange definito nell'RFC\cite{rfc7296}); al seguente \href{https://wiki.fullmetallinux.org/linux/security/Strongswan}{link} è disponibile una nostra descrizione sul funzionamento del protocollo.
 L'implementazione presa in considerazione è Strongswan poichè la più completa e diffusa. 
 Questo lavoro si pone come parte di un progetto di sperimentazione più ampio che ha come obiettivo l'applicazione protocolli utilizzati già sull'internet alle comunicaizoni satellitari.
 \\
