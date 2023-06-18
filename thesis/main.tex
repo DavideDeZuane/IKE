@@ -753,15 +753,15 @@ average_packets=$(( cumulative_packets / attempts ))
 \end{lstlisting}
 
 
-\subsection{perf}
+\subsection*{perf}
 
-Per installare perf apt-get intstall linux-perf se da problemi con workload failed è a causa dei permessi e per risolverlo basta sovrascrivere il contenuto di
-
-$/proc/sys/kernel/perf_event_paranoid$
-
-per fare il report di tutto l'ambiente utilizzare pef report
-
-\subsection{pmap}
+Per installare \lstinline|perf| sulle macchine debian create eseguire il seguente comando.
+\begin{lstlisting}
+$ sudo apt-get install linux-perf
+\end{lstlisting}
+\noindent
+Il comando potrebbe dare errore a causa dei permessi, per risolvere queso problema basta sovrascrivere il contenuto
+del file \lstinline|/proc/sys/kernel/perf_event_paranoid| con il valore $3$.
 
 \newpage
 
