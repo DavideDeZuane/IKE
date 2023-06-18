@@ -16,39 +16,35 @@ BCOR5mm, % Binding correction
 \lstset{
     backgroundcolor=\color{white},
     language=bash,
-    basicstyle=\ttfamily\small, % Imposta lo stile del testo
-    keywordstyle=[1]{\color{blue}}, % Imposta il colore delle parole chiave
+    basicstyle=\ttfamily\small, 
+    keywordstyle=[1]{\color{blue}}, 
     morekeywords=[1]{pki, ipsec, ip, xfrm, conn, EAP, RSA, ECDSA, openssl, qemu, kvm, chmod, perf, pmap}, 
     deletekeywords=[1]{type,in},
-    keywordstyle=[2]{\color{green!40}}, % Imposta il colore delle parole chiave
+    keywordstyle=[2]{\color{green!40}},
     morekeywords=[2]{\$,}, 
-    keywordstyle=[3]{\color{red}}, % Imposta il colore delle parole chiave
+    keywordstyle=[3]{\color{red}},
     morekeywords=[3]{leftsourceip, right, rightsubnet, auto, ike, leftauth, eap_identity, rightauth,leftcert,also,keyexchange,left,leftsubnet,forceencaps,compress,type,fragmentation,rekey,rightid,rightsourceip,rightdns,leftsendcert,src,dst,proto,auth,trunc, enc, anti,replay,window }, 
     deletekeywords=[3]{ipsec-ike},
-    keywordstyle=[4]{\color{gray}}, % Imposta il colore delle parole chiave
+    keywordstyle=[4]{\color{gray}},
     morekeywords=[4]{Certificate, Data, Version, Serial Number, Signature, Algorithm, Issuer, Validity, Subject, Public, Key, Info, Modulus, Exponent, Signature, Not, Before, After, Serial, Number, RSA, pub, X509v3, extensions, NIST, CURVE, ASN1, OID, Authority, Identifier, Alternative, Name, Extended, Usage },
-    stringstyle=\color{red}, % Imposta il colore delle stringhe
-    breaklines=true, % Esegue il wrapping delle linee se troppo lunghe
-    frame=single, % Inserisce una cornice intorno al codice
+    stringstyle=\color{red},
+    breaklines=true,
+    frame=single, 
     framesep=7pt,
 }
-
-\input{structure.tex} % Include the structure.tex file which specified the document structure and layout
-
-\hyphenation{Fortran hy-phen-ation} % Specify custom hyphenation points in words with dashes where you would like hyphenation to occur, or alternatively, don't put any dashes in a word to stop hyphenation altogether
+\input{structure.tex} 
+\hyphenation{Fortran hy-phen-ation} 
 
 %----------------------------------------------------------------------------------------
 %	TITLE AND AUTHOR(S)
 %----------------------------------------------------------------------------------------
+\title{\normalfont\spacedallcaps{IKEv2 Testing}} 
+%\subtitle{Subtitle}
+\author{\spacedlowsmallcaps{Davide De Zuane \& Rahmi El Mechri}} 
+\date{}
 
-\title{\normalfont\spacedallcaps{IKEv2 Testing}} % The article title
-
-%\subtitle{Subtitle} % Uncomment to display a subtitle
-
-\author{\spacedlowsmallcaps{Davide De Zuane \& Rahmi El Mechri}} % The article author(s) - author affiliations need to be specified in the AUTHOR AFFILIATIONS block
-
-\date{} % An optional date to appear under the author(s)
-
+%----------------------------------------------------------------------------------------
+%	DOCUMENT BODY
 %----------------------------------------------------------------------------------------
 
 \begin{document}
@@ -56,58 +52,35 @@ BCOR5mm, % Binding correction
 %----------------------------------------------------------------------------------------
 %	HEADERS
 %----------------------------------------------------------------------------------------
-
-\renewcommand{\sectionmark}[1]{\markright{\spacedlowsmallcaps{#1}}} % The header for all pages (oneside) or for even pages (twoside)
-%\renewcommand{\subsectionmark}[1]{\markright{\thesubsection~#1}} % Uncomment when using the twoside option - this modifies the header on odd pages
-\lehead{\mbox{\llap{\small\thepage\kern1em\color{halfgray} \vline}\color{halfgray}\hspace{0.5em}\rightmark\hfil}} % The header style
-
-\pagestyle{scrheadings} % Enable the headers specified in this block
+\renewcommand{\sectionmark}[1]{\markright{\spacedlowsmallcaps{#1}}}
+\lehead{\mbox{\llap{\small\thepage\kern1em\color{halfgray} \vline}\color{halfgray}\hspace{0.5em}\rightmark\hfil}} 
+\pagestyle{scrheadings} 
 
 %----------------------------------------------------------------------------------------
 %	TABLE OF CONTENTS & LISTS OF FIGURES AND TABLES
 %----------------------------------------------------------------------------------------
-
-\maketitle % Print the title/author/date block
-
+\maketitle
 \newpage
-
-\setcounter{tocdepth}{2} % Set the depth of the table of contents to show sections and subsections only
-
-\tableofcontents % Print the table of contents
-
-%\listoffigures % Print the list of figures
-
-%\listoftables % Print the list of tables
+\setcounter{tocdepth}{2} 
+\tableofcontents 
 
 %----------------------------------------------------------------------------------------
 %	ABSTRACT
 %----------------------------------------------------------------------------------------
-
-\section*{Abstract} % This section will not appear in the table of contents due to the star (\section*)
-
-\lipsum[1] % Dummy text
-
-%----------------------------------------------------------------------------------------
-%	AUTHOR AFFILIATIONS
-%----------------------------------------------------------------------------------------
-
-%----------------------------------------------------------------------------------------
-
-\newpage % Start the article content on the second page, remove this if you have a longer abstract that goes onto the second page
+\section*{Abstract} 
 
 %----------------------------------------------------------------------------------------
 %	INTRODUCTION
 %----------------------------------------------------------------------------------------
 
+\newpage
 \section{Introduction}
 
-
+Tutte le informazioni su IKE sono state recuperate tramite la RFC\cite{rfc7296}.
 %----------------------------------------------------------------------------------------
-%	METHODS
+%	CONFIGURATION SETUP
 %----------------------------------------------------------------------------------------
-
 \newpage
-
 \section{Setup}
 
 Andiamo a vedere nel dettaglio l'ambiene e la configurazione che abbiamo utilizzato per realizzare i test. Per verificare le capacità di IKE abbiamo previsto:
@@ -319,9 +292,8 @@ nostro caso ha una dimensione pari a $619$ byte. Questo fa sì che non si ecceda
 modo la fase di IKE AUTH effettua solamente uno scambio.
 
 %----------------------------------------------------------------------------------------
-%	RESULTS AND DISCUSSION
+%	TESTING SECTION
 %----------------------------------------------------------------------------------------
-
 \newpage
 \section{Testing}
 
@@ -870,11 +842,10 @@ Signature Algorithm: ecdsa-with-SHA256
 %	BIBLIOGRAPHY
 %----------------------------------------------------------------------------------------
 \newpage
-\renewcommand{\refname}{\spacedlowsmallcaps{References}} % For modifying the bibliography heading
+\renewcommand{\refname}{\spacedlowsmallcaps{References}} 
 
 \bibliographystyle{unsrt}
-\bibliography{sample.bib} % The file containing the bibliography
-
+\bibliography{sample.bib} 
 %----------------------------------------------------------------------------------------
 
 \end{document}
