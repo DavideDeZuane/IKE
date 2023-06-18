@@ -75,8 +75,20 @@ BCOR5mm, % Binding correction
 
 \newpage
 \section{Introduction}
+Lo scopo di questa tesina è stimare le risorse necessarie per utilizzare IPsec, una suite di protocolli per la sicurezza nelle comunicazioni nel layer network.
+IPsec si basa sull'instaurazione sicura di Security Associatons (SA), definite dal protocollo ISAKMP, e il cui scambio di chiavi avviene attraverso il protocollo IKE (Internet Key Exchange definito nell'RFC\cite{rfc7296}).
+L'implementazione presa in considerazione è Strongswan poichè la più completa e diffusa. 
+Questo lavoro si pone come parte di un più grande progetto di sperimentazione attraverso canali satellitari di protocolli utilizzati già sull'internet.
+\\
 
-Tutte le informazioni su IKE sono state recuperate tramite la RFC\cite{rfc7296}.
+\noindent
+L'utilizzo di satelliti Geo Stazionari per le comunicazioni richiede un'attenta analisi delle trasmissioni, in quanto introducono elevati tempi di viaggio.
+L'obiettivo è determianre se l'impiego di Strongswan è adatto a questa applicazione ed esaminare delle possibili configurazione da utilizzare.
+\\
+
+\noindent
+Procederemo con una descrizione su come abbiamo deciso di eseguire il testing e tutte le configurazioni che abbiamo eseguito.
+Seguira poi la descrizione delle configurazioni prese in esame.
 %----------------------------------------------------------------------------------------
 %	CONFIGURATION SETUP
 %----------------------------------------------------------------------------------------
@@ -424,9 +436,8 @@ total kB         1128980   10692    2772
 \end{lstlisting}
 \newpage
 \section{Conclusioni}
-
+In seguito ai test effettuati, Strongswan si e' rivelato un'implementazione di IKE sufficientemente prestante per i nostri scopi. Le diverse configurazioni non infuiscono eccessivamente sulle risorse necessarie, sia in termini computazionali che di tempo. Tuttavia, dato il contesto satellitare, il numero di scambi risulta essere un fattore critico. Per questa ragione, suggeriamo l'utilizzo di una autenticazione basata su certificati di tipo ECDSA, cosi da ridurre al minimo il tempo impiegato per la trasmissione, essendo questi di dimensione abbastanza contenuta da non essere frammentati.
 \newpage
-
 \appendix
 
 \section{Configuration File}
