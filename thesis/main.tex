@@ -11,14 +11,14 @@ BCOR5mm, % Binding correction
 \usepackage{dirtree}
 \usepackage{adjustbox}
 \usepackage{hyperref}
-
+\usepackage{fontawesome5}
 
 \lstset{
     backgroundcolor=\color{white},
     language=bash,
     basicstyle=\ttfamily\small, % Imposta lo stile del testo
     keywordstyle=[1]{\color{blue}}, % Imposta il colore delle parole chiave
-    morekeywords=[1]{pki, ipsec, ip, xfrm, conn, EAP, RSA, ECDSA, openssl, qemu, kvm}, 
+    morekeywords=[1]{pki, ipsec, ip, xfrm, conn, EAP, RSA, ECDSA, openssl, qemu, kvm, chmod, perf, pmap}, 
     deletekeywords=[1]{type,in},
     keywordstyle=[2]{\color{green!40}}, % Imposta il colore delle parole chiave
     morekeywords=[2]{\$,}, 
@@ -323,63 +323,134 @@ modo la fase di IKE AUTH effettua solamente uno scambio.
 %----------------------------------------------------------------------------------------
 
 \newpage
-
-
 \section{Testing}
 
-\subsection{Panoramica}
+Il nostro lavoro si concentra sullo stimare le risorse necessarie per l'instaurazione di Security Associations (SA). In ogni sottosezione:
+\begin{enumerate}
+    \item analizzaremo uno degli aspetti critici considerati;
+    \item descrivere come abbiamo effettutato le misurazioni;
+    \item i risultati ottenuti.
+\end{enumerate}
 
-Il nostro lavoro si concentra sullo stimare le risorse necessarie per l'installazione di Security Associations. In ogni sottosezione analizzeremo uno degli aspetti critici, e descriveremo come abbiamo effettuate le misurazioni ed i risultati ottenuti.
-Vedi \hyperlink{}{appendice} per la configurazione strumenti di misura.
 
 \subsection{Analisi traffico}
 
 \subsubsection{Misurazioni}
 
-Per effettuare l'analisi del traffico necessario per l'instaurazione di una SA tra i due nodi abbiao realizzato uno shell script (vedi Appendice).
-Il tool principale per la realizzazione di quest'ultimo e' tcpdump, un programma per il monitoraggio delle interfaccie e la cattura dei pacchetti in entrata ed in un uscita da un calcolatore. La scelta e' dovuta alla precisione in termini di timestamp fornita, e alla sua diffusione (e' gia presente di default in molte distro linux).
-Lo script iterativamente instaura ed elimina una security association, e ne cattura il traffico, tramite il quale possiamo misurare i tempi necessari per le diverse fasi del protcollo, e le dimensioni dei pacchetti.
+Per effettuare tra i due nodi abbiao realizzato uno shell script. Il tool principale per la realizzazione di quest'ultimo e' \lstinline|tcpdump|, un programma per il monitoraggio delle interfaccie e la cattura dei pacchetti in entrata ed in un uscita da un calcolatore. 
+La scelta e' dovuta alla precisione dei timestamp che utilizza, e alla sua diffusione (e' gia presente di default in molte distro linux).
+\\ 
+
+\noindent
+Lo script iterativamente \textit{instaura} ed \textit{elimina} una security association, e ne cattura il traffico. Tramite questo possiamo misurare i tempi necessari per le diverse fasi del protcollo, e le dimensioni dei pacchetti.
 Il tool permette di specificare la suite crittografica che si vuole prendere in esame, ed il numero di tentativi da effettuare.
 Al termine delle iterazioni lo script fornisce delle medie dei valori che si vogliono misurare.
 
 \subsubsection{Risultati}
 
 Come specificato nella fase di configurazione si nota che il numero di scambi dipende fortemente dalla suite crittografica considerata.
-In particolare, il metodo di autenticazione e' la componente che incide maggiormente. Ad esempio l'autenticazione tramite MSCHAPv2 prevede 4 scambi, mentre l'utilizzo di certificati prevede 2 scambi. Tuttavia e' importante osservare che qualora il certificato ecceda la dimensione massima per il payload dei pacchetti ip, si ha frammentazione. Questo fenomeno si puo' osservare ad esempio con l'utilizzo di certificati generati con RSA 2048.
+In particolare, il \textbf{metodo di autenticazione} e' la componente che incide maggiormente. 
+Ad esempio l'autenticazione tramite \lstinline|MSCHAPv2| prevede 4 scambi, mentre l'utilizzo di certificati prevede 2 scambi. 
+Tuttavia e' importante osservare che qualora il certificato ecceda la dimensione massima per il payload dei pacchetti ip, si ha frammentazione. Questo fenomeno si puo' osservare ad esempio con l'utilizzo di certificawbbbti generati con RSA 2048.
+\\
 
-In figura a e b troviamo i risultati ottenuti utilizzando certificati generati rispettivamente con RSA 2048 e con ECDSA 256, data la seguente suite crittografica:
+\noindent
+Di seguito riportiamo i risultati ottenuti utilizzando certificati generati rispettivamente con RSA 2048 e con ECDSA 256, data la seguente suite crittografica: \\
+\lstinline|AES_128_CBC_HMAC_256_AES_128_XCBC_ECP_256|.
 
-- AES 128 CBC
-- HMAC 256
-- AES 128 XCBC
-- ECP 256
+\begin{figure}[ht]
+    \begin{minipage}{0.45\textwidth}
+      \begin{lstlisting}[caption=Risultati ECDSA]
+| Average time per attempt | 0.0587 
+ ----------------------------------
+| Total attempts time      | 02.9371
+ ----------------------------------
+| Average packets          | 4 
+ ----------------------------------
+| Average init bytes       | 1365 
+ ----------------------------------
+| Average auth bytes       | 1772 
+ ----------------------------------
+| Average exchanged bytes  | 3137 
+ ----------------------------------
+| Total exchanged bytes    | 156850
+      \end{lstlisting}
+    \end{minipage}\hfill
+    \begin{minipage}{0.45\textwidth}
+      \begin{lstlisting}[caption=Risultati RSA]
+| Average time per attempt | 0.0839
+ ----------------------------------
+| Total attempts time      | 04.1999
+ ----------------------------------
+| Average packets          | 6 
+ ----------------------------------
+| Average init bytes       | 1365 
+ ----------------------------------
+| Average auth bytes       | 4184 
+ ----------------------------------
+| Average exchanged bytes  | 5549 
+ ----------------------------------
+| Total exchanged bytes    | 277450
+      \end{lstlisting}
+    \end{minipage}
+  \end{figure}
 
 
 \subsection{Utilizzo risorse CPU}
 
 \subsubsection{Misurazioni}
 
-Per misurare le risorse richieste dalla CPU per instaurare una SA utilizzando Strongswan, abbiamo utilizzato il tool perf.
+Per misurare le risorse computazionali richieste richieste da Strongswan, abbiamo utilizzato il tool \lstinline|perf|.
 Questo permette di effettuare CPU profiling, esaminando diversi parametri della CPU per l'esecuzione di un certo comando.
+\\
 In questo caso ci siamo soffermati sul numero di cicli di clock ed istruzioni per SA instaurata.
-Perf permette di eseguire il comando un certo numero di volte, fornendoci media e varianza dei valori.
+Inoltre \lstinline|perf| permette di misurare \textit{n} esecuzioni del comando, fornendo media e varianza dei valori.
 
 
 \subsubsection{Risultati}
 
-In figura possiamo vedere i dati ottenuti con perf. 
+Di seguito riportiamo l'esecuzione del comando perf per l'instaurazione di SA che utilizzano rispettivamente \lstinline|RSA| e \lstinline|ECDSA| considerando 3 esecuzioni.
+\vspace*{0.2cm}
+\begin{lstlisting}
+Performance counter stats for '/usr/sbin/ipsec up base-rsa' (3 runs):
+
+    12.685.614      cycles             ( +-  6,59% )
+    12.383.771      instructions       ( +-  0,61% )
+    41.040.697 ns   duration_time      ( +- 58,59% )
+
+        0,0410 +- 0,0240 seconds time elapsed  ( +- 58,59% )
+
+
+\end{lstlisting}
+
+\begin{lstlisting}
+ Performance counter stats for '/usr/sbin/ipsec up base-ecdsa' (3 runs):
+
+    12.461.099      cycles             ( +-  5,87% )
+    12.146.504      instructions       ( +-  1,52% )
+    25.065.990 ns   duration_time      ( +- 71,83% )
+
+     0,0251 +- 0,0180 seconds time elapsed  ( +- 71,83% )
+
+\end{lstlisting}
 
 \subsection{Occupazione di memoria}
 
 \subsubsection{Misurazioni}
 
-Per misurare la quantita' di RAM necessaria per Strongswan abbiamo utilizzato il tool pmap, che permette di avere informazioni sulla memoria allocata per un determinato processo.
+Per misurare la quantita' di RAM necessaria per Strongswan abbiamo utilizzato il tool \lstinline|pmap|, che permette di avere informazioni sulla memoria allocata per un determinato processo.
 
 \subsubsection{Risultati}
 
-In seguito a diverse misurazioni possiamo constatare che l'utilizzo di memoria per il demone charon si attesta tipicamente a 10 MB, piu in generale nell'ordine delle decine di MB, mentre per ogni SA instaurata si ha un aumento in memoria di circa 15 KB, piu in generale nell'ordine delle decine di KiloByte. 
+In seguito a diverse misurazioni possiamo constatare che l'utilizzo di memoria per il demone \textbf{charon} si attesta tipicamente a $10 MB$, piu in generale nell'ordine delle decine di MB, mentre per ogni SA instaurata si ha un aumento in memoria di circa $15 KB$, piu in generale nell'ordine delle decine di KiloByte. 
+\vspace*{0.2cm}
+\begin{lstlisting}
+                 Kbytes    RSS    Dirty
+---------------- ------- ------- ------- 
+total kB         1128980   10692    2772
 
-
+\end{lstlisting}
+\newpage
 \section{Conclusioni}
 
 \newpage
@@ -551,9 +622,25 @@ le chiavi negoziate per l'autenticazione di messaggio e di cifratura.
     \item Aggiungere all'interno della tabella le varie entry riportate tramite \lstinline|ip xfrm|
 \end{itemize}
 
-\subsection{Shell script}
-
+\subsection*{Shell script}
+\hypertarget{misurazioni}{}
 Di seguito e' riportato lo shell script per l'analisi del traffico dei pacchetti.
+Non sono stati riportati gli output, lo script completo, così come tutto il materiale della tesina, sono 
+contenuti all'interno della \href{https://github.com/DavideDeZuane/IKE}{\faGithub \, repository}.
+Prima di eseguire lo script è vanno cambiati i permessi.
+
+\vspace*{0.2cm}
+\begin{lstlisting}
+chmod +x ikev2-tester.sh
+\end{lstlisting}
+\noindent
+I \textbf{flag} da specificare al momento dell'esecuzione dello script sono i seguenti:
+\begin{itemize}
+    \item \lstinline|-i|: per specificare l'interfaccia su cui catturare i pacchetti con tcpdump
+    \item \lstinline|-s|: per specificare la suite crittografica da usare
+    \item \lstinline|-n|: per specificare il numero di tentativi da effettuare
+\end{itemize}
+
 \begin{lstlisting}
 #!/usr/bin/env bash
 
@@ -611,23 +698,6 @@ then
     exit 1
 fi
 
-echo ""
-echo "###############################################"
-echo ""
-echo "Number of attempts: $attempts"
-echo ""
-echo "###############################################"
-echo ""
-echo "Chosen suite: $suite"
-echo " - Encryption algorithm: $enc_alg"
-echo " - Authentication algorithm: $auth_alg"
-echo " - Pseudo Random Function algorithm: $prf_alg"
-echo " - Diffie-Hellman Group: $dh_alg"
-echo " - Authentication Method: $auth_method"
-echo ""
-echo "###############################################"
-echo ""
-
 cumulative_time=0
 cumulative_packets=0
 cumulative_size=0
@@ -670,28 +740,6 @@ do
     cumulative_size=$(( cumulative_size + attempt_size ))
     cumulative_init_size=$(( cumulative_init_size + init_size ))
     cumulative_auth_size=$(( cumulative_auth_size + auth_size ))
-    echo " -------------------------------------------"
-    echo "| Init time       | 0$init_time  "
-    echo " -------------------------------------------"
-    echo "| Init packets    | $init_packets     "
-    echo " -------------------------------------------"
-    echo "| Exchanged bytes | $init_size   "
-    echo " -------------------------------------------"
-    echo "| Auth time       | 0$auth_time "
-    echo " -------------------------------------------"
-    echo "| Auth_packets    | $auth_packets         "
-    echo " -------------------------------------------"
-    echo "| Exchanged bytes | $auth_size  "
-    echo " -------------------------------------------"
-    echo "| Total time      | 0$attempt_time  "
-    echo " -------------------------------------------"
-    echo "| Total packets   | $attempt_packets "
-    echo " -------------------------------------------"
-    echo "| Total bytes     | $attempt_size   "
-    echo " -------------------------------------------"
-    echo ""
-    echo "###############################################"
-    echo ""
     sudo rm inittmpbuffer1 inittmpbuffer2 inittmpbuffer3 authtmpbuffer1 authtmpbuffer2 authtmpbuffer3
 done
 
@@ -702,41 +750,8 @@ average_size=$(( cumulative_size / attempts ))
 average_packets=$(( cumulative_packets / attempts ))
 
 
-echo "All attempts executed!"
-echo " -------------------------------------------"
-echo "| Average time per attempt | 0$average_time "
-echo " -------------------------------------------"
-echo "| Total attempts time      | 0$cumulative_time "
-echo " -------------------------------------------"
-echo "| Average packets          | $average_packets "
-echo " -------------------------------------------"
-echo "| Average init bytes       | $average_init_size "
-echo " -------------------------------------------"
-echo "| Average auth bytes       | $average_auth_size "
-echo " -------------------------------------------"
-echo "| Average exchanged bytes  | $average_size "
-echo " -------------------------------------------"
-echo "| Total exchanged bytes    | $cumulative_size"
-echo " -------------------------------------------"
-echo ""
-echo "Goodbye!"
-echo ""
-echo "###############################################"
-echo "
-
 \end{lstlisting}
 
-Per eseguire lo script occorre renderlo eseguibile col seguente comando:
-\begin{lstlisting}
-chmod +x ikev2-tester.sh
-\end{lstlisting}
-
-I flag da specificare al momento dell'esecuzione dello script sono i seguenti:
-- -i: per specificare l'interfaccia su cui catturare i pacchetti con tcpdump
-- -s: per specificare la suite crittografica
-- -n: per specificare il numero di tentativi da effettuare
-
-Utilizzando la configurazione speficata in \hyperlink{}{}, le suite crittografiche disponibili sono le seguenti:
 
 \subsection{perf}
 
