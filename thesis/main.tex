@@ -75,20 +75,21 @@ BCOR5mm, % Binding correction
 
 \newpage
 \section{Introduction}
-Lo scopo di questa tesina è stimare le risorse necessarie per utilizzare IPsec, una suite di protocolli per la sicurezza nelle comunicazioni nel layer network.
-IPsec si basa sull'instaurazione sicura di Security Associatons (SA), definite dal protocollo ISAKMP, e il cui scambio di chiavi avviene attraverso il protocollo IKE (Internet Key Exchange definito nell'RFC\cite{rfc7296}).
+Lo scopo di questa tesina è stimare le risorse necessarie per l'utilizzo di IPsec, una suite di protocolli al livello network per realizzare comunicazioni sicure.
+IPsec si basa sull'instaurazione di Security Associatons (SA), definite dal protocollo ISAKMP, le quali definiscono uno stato condiviso tra i due host della comunicaizone per utilizzare
+primitive crittografiche. La parte critica di questo processo è lo scambio di chiavi, il quale avviene attraverso il protocollo IKE (Internet Key Exchange definito nell'RFC\cite{rfc7296}).
 L'implementazione presa in considerazione è Strongswan poichè la più completa e diffusa. 
-Questo lavoro si pone come parte di un più grande progetto di sperimentazione attraverso canali satellitari di protocolli utilizzati già sull'internet.
+Questo lavoro si pone come parte di un progetto di sperimentazione più ampio che ha come obiettivo l'applicazione protocolli utilizzati già sull'internet alle comunicaizoni satellitari.
 \\
 
 \noindent
-L'utilizzo di satelliti Geo Stazionari per le comunicazioni richiede un'attenta analisi delle trasmissioni, in quanto introducono elevati tempi di viaggio.
-L'obiettivo è determianre se l'impiego di Strongswan è adatto a questa applicazione ed esaminare delle possibili configurazione da utilizzare.
+Infatti, l'utilizzo di satelliti Geo Stazionari richiede un'attenta analisi delle trasmissioni, dato che introducono elevati tempi di viaggio e canali molto rumorosi.
+L'obiettivo è determianre se l'impiego di Strongswan è adatto a questa applicazione, ed esaminare delle possibili configurazione da utilizzare.
 \\
 
 \noindent
 Procederemo con una descrizione su come abbiamo deciso di eseguire il testing e tutte le configurazioni che abbiamo eseguito.
-Seguira poi la descrizione delle configurazioni prese in esame.
+Seguirà poi la descrizione delle configurazioni prese in esame.
 %----------------------------------------------------------------------------------------
 %	CONFIGURATION SETUP
 %----------------------------------------------------------------------------------------
@@ -112,7 +113,7 @@ Nella fase di sperimentazione abbiamo utilizzato le seguenti convenzioni:
 \subsection{Environment}
 
 Per simulare i due host della comunicazione abbiamo creato due macchine virtuali tramite l'utilizzo di qemu/kvm, questo per avere 
-delle performance il più possibile simili a quelle reali. Le due macchine virtuali sono state create in modalità bridge, questo per evitare problemi con la modalità NAT.
+delle performance il più possibile simili a quelle reali.
 
 \noindent
 Le macchine virtuali utilizzato hanno le seguenti specifiche:
@@ -148,7 +149,7 @@ si può utilizzare l'interfaccia grafica fornita da \lstinline|virt-manager|.
 \subsection{Configuration} 
 
 I file e le directory coinvolte nel processo di configurazione sono i seguenti. Dato che una delle principali modifiche di IKEv2 
-rispetto alla versione precedente è la possibilità di autenticazione tramite certificati.
+rispetto alla versione precedente è la possibilità di autenticazione tramite certificati andremo ad agire sulle directory che li contengono.
 \\
 
     \dirtree{%
@@ -179,10 +180,8 @@ Una delle principali novità che introduce \lstinline|IKEv2| è la possibilità 
 
 \noindent
 A partire da una chiave pubblica è necessario realizzare un certificato di chiave pubblica e questo richiede la chiave privata di una CA. 
-Nel nostro caso ci siamo creati dei certificati da CA e li abbiamo ditribuiti manualmente tra i due host. \\
-
-\noindent
-Per la generazione abbiamo utilizzato il tool \lstinline|pki|
+Nel nostro caso ci siamo creati dei certificati da CA e li abbiamo ditribuiti manualmente tra i due host.
+Per la generazione abbiamo utilizzato il tool \lstinline|pki|.
 
 \subsubsection*{CA Certificate}
 Partiamo con la generazione dei certificati da Certification Authority, di seguito sono riportati i due comandi da utilizzare. Ne occorrono due poichè per firmare
@@ -224,9 +223,8 @@ $ pki --pub --in 'host.rsa.key' --type rsa | pki --issue --lifetime 1825 \
 \end{lstlisting}
 
 \noindent
-Si procede in maniera analoga con le opportune modifiche anche per il certificato ECDSA. Questi vanno poi posiizonati all'intenro della
+Si procede in maniera analoga con le opportune modifiche anche per il certificato \lstinline|ECDSA|. Questi vanno poi posizonati all'intenro della
 directory \lstinline|certs|.
-
 
 \subsubsection{Mschap}
 Il riassunto della configurazione è mostrato in tabella, per l'initiator e il responder sono riportate le modalità della loro autenticazione.
@@ -245,7 +243,7 @@ Il riassunto della configurazione è mostrato in tabella, per l'initiator e il r
 \end{center}
 
 \noindent
-Esaminando gli scambi di IKE AUTH osserviamo che questa modalità richiede in totale $4$ exchange. 
+Esaminando gli scambi di \lstinline|IKE_AUTH| osserviamo che questa modalità richiede in totale $4$ exchange. 
 
 \subsubsection{RSA}
 
@@ -264,8 +262,8 @@ Esaminando gli scambi di IKE AUTH osserviamo che questa modalità richiede in to
 \end{center}
 \vspace*{0.2cm}
 \noindent
-Utilizzando certificati RSA si osserva che la dimensione di un certificato eccede la dimensione massima di un pacchetto IP
-per tali motivi si ha la frammentazione: ovvero il contenuto, poichè eccede la dimenisone massima del campo \textit{data} viene
+Utilizzando certificati \lstinline|RSA| si osserva che la dimensione di un certificato eccede la dimensione massima di un pacchetto IP
+per tali motivi si ha la frammentazione: in cui il contenuto del pacchetto, poichè eccede la dimenisone massima del campo \textit{data}, viene
 spezzato in più paccetti.
 \newline  \\
 \noindent
@@ -278,9 +276,8 @@ Anando ad esaminare il certificato, si osserva che ha una dimensione pari a $103
 \end{itemize} 
 
 \noindent
-Idealmente gli scambi durante IKE AUTH dovrebbero essere $2$ ovvero i due si scambiano reciprocamente i certificati. Tuttavia,
-data la dimensioni di quest'ultimi, gli scambi effettivi risultano essere in totale $4$. 
-
+Idealmente durante la fase \lstinline|IKE_AUTH| dovrebbe essere presente un solo scambio, in cui i due si scambiano reciprocamente i certificati. Tuttavia,
+data la dimensioni di quest'ultimi, gli scambi effettivi risultano essere in totale $2$. 
 
 \subsubsection{ECDSA}
 
@@ -299,10 +296,14 @@ data la dimensioni di quest'ultimi, gli scambi effettivi risultano essere in tot
 \end{center}
 \vspace*{0.2cm}
 \noindent
-Si osserva che i certificati ECDSA hanno una dimensione ridotta rispetto a quella dei certifcati RSA, infatti quello utilizzato nel
+Si osserva che i certificati \lstinline|ECDSA| hanno una dimensione ridotta rispetto a quella dei certifcati \lstinline|RSA|, infatti quello utilizzato nel
 nostro caso ha una dimensione pari a $619$ byte. Questo fa sì che non si ecceda la dimensione del payload del pacchetto IP, in questo
-modo la fase di IKE AUTH effettua solamente uno scambio.
+modo la fase di \lstinline|IKE_AUTH| si effettua solamente uno scambio.
 
+
+\subsubsection*{Secure}
+Sono presenti le stesse configurazioni tuttavia con l'impiego di una chiper suite più sicura, questa è la seguente:
+\lstinline|AES_256_SHA_384_ECP384|.
 %----------------------------------------------------------------------------------------
 %	TESTING SECTION
 %----------------------------------------------------------------------------------------
@@ -312,8 +313,8 @@ modo la fase di IKE AUTH effettua solamente uno scambio.
 Il nostro lavoro si concentra sullo stimare le risorse necessarie per l'instaurazione di Security Associations (SA). In ogni sottosezione:
 \begin{enumerate}
     \item analizzaremo uno degli aspetti critici considerati;
-    \item descrivere come abbiamo effettutato le misurazioni;
-    \item i risultati ottenuti.
+    \item descriveremo come abbiamo effettutato le misurazioni;
+    \item descriveremo i risultati ottenuti.
 \end{enumerate}
 
 
@@ -321,30 +322,33 @@ Il nostro lavoro si concentra sullo stimare le risorse necessarie per l'instaura
 
 \subsubsection{Misurazioni}
 
-Per effettuare tra i due nodi abbiao realizzato uno shell script. Il tool principale per la realizzazione di quest'ultimo e' \lstinline|tcpdump|, un programma per il monitoraggio delle interfaccie e la cattura dei pacchetti in entrata ed in un uscita da un calcolatore. 
-La scelta e' dovuta alla precisione dei timestamp che utilizza, e alla sua diffusione (e' gia presente di default in molte distro linux).
+Per interecettare e analizzare il traffico abbiamo realizzato uno shell script. Il tool principale per la realizzazione di quest'ultimo e' \lstinline|tcpdump|, un programma per il monitoraggio delle interfaccie e la cattura dei pacchetti in entrata ed in un uscita da un calcolatore. 
+La scelta si è basata sulla precisione dei timestamp che utilizza, e alla sua diffusione (e' gia presente di default in molte distro linux).
 \\ 
 
 \noindent
-Lo script iterativamente \textit{instaura} ed \textit{elimina} una security association, e ne cattura il traffico. Tramite questo possiamo misurare i tempi necessari per le diverse fasi del protcollo, e le dimensioni dei pacchetti.
+Lo script iterativamente \textit{instaura} ed \textit{elimina} una SA, nel mentre cattura il traffico. Tramite questo possiamo misurare i tempi necessari per le diverse fasi del protcollo, e le dimensioni dei pacchetti.
 Il tool permette di specificare la suite crittografica che si vuole prendere in esame, ed il numero di tentativi da effettuare.
 Al termine delle iterazioni lo script fornisce delle medie dei valori che si vogliono misurare.
 
 \subsubsection{Risultati}
 
 Come specificato nella fase di configurazione si nota che il numero di scambi dipende fortemente dalla suite crittografica considerata.
-In particolare, il \textbf{metodo di autenticazione} e' la componente che incide maggiormente. 
-Ad esempio l'autenticazione tramite \lstinline|MSCHAPv2| prevede 4 scambi, mentre l'utilizzo di certificati prevede 2 scambi. 
-Tuttavia e' importante osservare che qualora il certificato ecceda la dimensione massima per il payload dei pacchetti ip, si ha frammentazione. Questo fenomeno si puo' osservare ad esempio con l'utilizzo di certificawbbbti generati con RSA 2048.
+In particolare, il \textbf{metodo di autenticazione} e' la componente che incide maggiormente.
+
+\noindent
+Ad esempio l'autenticazione tramite \lstinline|MSCHAPv2| prevede 4 scambi, mentre l'utilizzo di certificati ne prevede 2. 
+Tuttavia e' importante osservare che qualora il certificato ecceda la dimensione massima per il payload dei pacchetti ip, si ha \textbf{frammentazione}. 
+Questo fenomeno si puo' osservare ad esempio con l'utilizzo di certificati generati con \lstinline|RSA 2048|.
 \\
 
 \noindent
-Di seguito riportiamo i risultati ottenuti utilizzando certificati generati rispettivamente con RSA 2048 e con ECDSA 256, data la seguente suite crittografica: \\
+Di seguito riportiamo i risultati ottenuti utilizzando certificati generati rispettivamente con \lstinline|RSA 2048| e con \lstinline|ECDSA 256|, data la seguente suite crittografica: \\
 \lstinline|AES_128_CBC_HMAC_256_AES_128_XCBC_ECP_256|.
 
 \begin{figure}[ht]
     \begin{minipage}{0.45\textwidth}
-      \begin{lstlisting}[caption=Risultati ECDSA]
+      \begin{lstlisting}[caption=Risultati ECDSA, language=bash]
 | Average time per attempt | 0.0587 
  ----------------------------------
 | Total attempts time      | 02.9371
@@ -361,7 +365,7 @@ Di seguito riportiamo i risultati ottenuti utilizzando certificati generati risp
       \end{lstlisting}
     \end{minipage}\hfill
     \begin{minipage}{0.45\textwidth}
-      \begin{lstlisting}[caption=Risultati RSA]
+      \begin{lstlisting}[caption=Risultati RSA, language=bash]
 | Average time per attempt | 0.0839
  ----------------------------------
 | Total attempts time      | 04.1999
@@ -384,7 +388,7 @@ Di seguito riportiamo i risultati ottenuti utilizzando certificati generati risp
 
 \subsubsection{Misurazioni}
 
-Per misurare le risorse computazionali richieste richieste da Strongswan, abbiamo utilizzato il tool \lstinline|perf|.
+Per misurare le risorse computazionali richieste da Strongswan, abbiamo utilizzato il tool \lstinline|perf|.
 Questo permette di effettuare CPU profiling, esaminando diversi parametri della CPU per l'esecuzione di un certo comando.
 \\
 In questo caso ci siamo soffermati sul numero di cicli di clock ed istruzioni per SA instaurata.
@@ -436,7 +440,10 @@ total kB         1128980   10692    2772
 \end{lstlisting}
 \newpage
 \section{Conclusioni}
-In seguito ai test effettuati, Strongswan si e' rivelato un'implementazione di IKE sufficientemente prestante per i nostri scopi. Le diverse configurazioni non infuiscono eccessivamente sulle risorse necessarie, sia in termini computazionali che di tempo. Tuttavia, dato il contesto satellitare, il numero di scambi risulta essere un fattore critico. Per questa ragione, suggeriamo l'utilizzo di una autenticazione basata su certificati di tipo ECDSA, cosi da ridurre al minimo il tempo impiegato per la trasmissione, essendo questi di dimensione abbastanza contenuta da non essere frammentati.
+In seguito ai test effettuati, Strongswan si e' rivelato un'implementazione di \lstinline|IKE| sufficientemente prestante per i nostri scopi. 
+Le diverse configurazioni non influiscono eccessivamente sulle risorse necessarie, sia in termini computazionali che di tempo. 
+Tuttavia, dato il contesto satellitare, il numero di scambi risulta essere un fattore critico. 
+Per questa ragione, suggeriamo l'utilizzo di una autenticazione basata su certificati di tipo \lstinline|ECDSA|, cosi da ridurre al minimo il tempo impiegato per la trasmissione, essendo questi di dimensione abbastanza contenuta da non essere frammentati.
 \newpage
 \appendix
 
