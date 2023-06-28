@@ -6,3 +6,5 @@ In questo progetto andiamo a eggettuare del testing sui vari metodi di autentica
 - EAP MSCHAPv2
 - Certificati RSA
 - Certificati ECDSA
+
+Abbiamo realizzato un tool per andare a vedere il numero di pacchetti scambiati e il numero di byte scambiati.
